@@ -31,6 +31,10 @@ import sys
 import subprocess
 from datetime import datetime
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 import requests
 
 ARCHIVO_HISTORICO = "historico_proyecciones_2026.csv"

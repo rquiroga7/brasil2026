@@ -6,25 +6,17 @@ __pycache__/
 dados_tse_2022/
 *.part
 
-# === DATOS GENERADOS (no se versionan) ===
-# Escrutinio 2026 en vivo
-escrutinio_zonas_2026.csv
-serie_temporal_2026.csv
+# === DATOS CRUDOS (salida del scraper): NO se versionan ===
+# Toda la salida cruda por zona, series y estado del raspador.
+*.csv
+!padron_y_asistencia_2022.csv
 control_versiones_2026.json
 padron_2026.csv
 
-# Intermedios de 2022 generados por scrapingbrasil2022.py
-escrutinio_zonas_2022.csv
-candidatos_2022.csv
-historico_nacional_2022_*.csv
-
-# Proyecciones y salidas web
-historico_proyecciones_2026.csv
+# === DATOS PROCESADOS / PROYECCIONES ===
+# No se versionan en `main`. El único que se publica es `datos_web.json`
+# (pequeño) y se sube a la rama `data` por git plumbing, no a main.
+datos_web.json
 datos_proyeccion_2026.json
 datos_proyeccion_swing_2026.json
-datos_web.json
 grafico_vivo_2026.png
-
-# Entrada requerida (SÍ se versiona): padron_y_asistencia_2022.csv
-# Es el padrón/asistencia 2022 por zona que usan las proyecciones y no se puede
-# regenerar desde estos scripts. Si prefieres no versionarlo, añádelo aquí.

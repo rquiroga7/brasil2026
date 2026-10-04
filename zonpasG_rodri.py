@@ -35,6 +35,10 @@ import argparse
 import requests
 from datetime import datetime
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 # === CONFIGURACIÓN OFICIAL TSE 2026 ===
 DOMINIO_BASE   = "https://resultados.tse.jus.br"
 AMBIENTE       = "oficial"

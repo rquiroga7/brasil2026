@@ -22,6 +22,10 @@ import sys
 import time
 import subprocess
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 PY = sys.executable
 SCRAPE_SECONDS = int(os.environ.get("SCRAPE_SECONDS", "45"))
 PUBLISH_INTERVAL = int(os.environ.get("PUBLISH_INTERVAL", "60"))
