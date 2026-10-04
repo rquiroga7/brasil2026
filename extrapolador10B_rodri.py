@@ -20,7 +20,7 @@ Método de proyección (matricial por zona):
        - si no                      -> promedio nacional (▲▲▲).
   3. La proyección es la suma de asistencia_estimada * proporción.
 
-Denominador: candidatos + blancos (se excluyen los nulos).
+Denominador: votos válidos (se excluyen nulos y blancos).
 """
 
 import os
@@ -395,7 +395,7 @@ def graficar_desde_historico():
                     f"escrutado {df_crudo['escrutado_pct'].iloc[-1]:.2f}%)"))
   if not df_ext.empty:
     paneles.append(("pct", df_ext,
-                    "PROYECCIÓN v1 ESTRATIFICADA (candidatos + blancos, excluye nulos)"))
+                    "PROYECCIÓN v1 ESTRATIFICADA (votos válidos, excluye nulos y blancos)"))
   if not df_swing.empty:
     paneles.append(("pct", df_swing,
                     "PROYECCIÓN SWING v2 (2022 + swing observado, votos válidos)"))
