@@ -359,7 +359,7 @@ def ejecutar_extrapolacion():
   # === CONSOLA ===
   print("\n" + "=" * 74)
   print(f"   MONITOR DE EXTRAPOLACIÓN MATRICIAL PRECOZ | {fecha_hora_local} ")
-  print(f"   * Denominador = Candidatos + Blancos (nulos excluidos) | "
+  print(        f"   * Denominador = Candidatos (nulos y blancos excluidos) | "
         f"ESCRUTADO: {pct_escrutado:.2f}%")
   print("=" * 74)
   print(f"RAW (TSE)   | {total_lula_crudo:>10,} ({pct_l_crudo:5.2f}%) |"
