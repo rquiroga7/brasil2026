@@ -519,8 +519,6 @@ def graficar_simulacion_swing():
       ax.plot(cx, cy, "--", color=color, linewidth=1.8)
       ax.plot([100], [fin], "o", color=color, markersize=5)
       ax.text(101.5, fin, f"{fin:.1f}%", color=color, va="center", fontsize=9)
-    # referencia lineal tenue
-    ax.plot([xv[-1], 100], [yvv[-1], fin], ":", color=color, linewidth=1, alpha=0.45)
     if key in bandas:
       lo, hi = bandas[key]
       try:
