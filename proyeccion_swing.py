@@ -41,7 +41,9 @@ from extrapolador10B_rodri import (
     calcular_fallbacks_jerarquicos,
     inicializar_log_salida,
     graficar_desde_historico,
+    graficar_simulacion_swing,
     ARCHIVO_HISTORICO,
+    ARCHIVO_HIST_SWING,
 )
 
 ARCHIVO_ZONAS_2022 = "escrutinio_zonas_2022.csv"
@@ -435,7 +437,7 @@ def proyectar():
 
 
 def registrar_historico(resultado):
-    """Añade el resultado nacional del swing al historial (para el gráfico PNG)."""
+    """Añade el resultado nacional del swing a los historiales (gráficos PNG)."""
     if not resultado.get("swing_disponible"):
         return
     inicializar_log_salida()
@@ -448,6 +450,20 @@ def registrar_historico(resultado):
             nat["flavio"]["votos"], nat["flavio"]["pct"],
             nat["otros"]["votos"], nat["otros"]["pct"],
         ])
+    # Historial propio del swing (con intervalos p5–p95) para el fan chart.
+    cabecera = ["fecha_hora", "escrutado_pct", "lula_pct", "lula_p5", "lula_p95",
+                "flavio_pct", "flavio_p5", "flavio_p95", "otros_pct"]
+    nuevo = not os.path.exists(ARCHIVO_HIST_SWING)
+    with open(ARCHIVO_HIST_SWING, mode="a", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        if nuevo:
+            w.writerow(cabecera)
+        w.writerow([
+            resultado["actualizado"], resultado["escrutado_pct"],
+            nat["lula"]["pct"], nat["lula"].get("p5", ""), nat["lula"].get("p95", ""),
+            nat["flavio"]["pct"], nat["flavio"].get("p5", ""), nat["flavio"].get("p95", ""),
+            nat["otros"]["pct"],
+        ])
 
 
 def main():
@@ -459,6 +475,7 @@ def main():
     registrar_historico(resultado)
     try:
         graficar_desde_historico()
+        graficar_simulacion_swing()
     except Exception as e:
         print(f"[!] No se pudo regenerar el gráfico: {e}")
     etiqueta = "SWING" if resultado["swing_disponible"] else "v1 (fallback, sin 2022)"

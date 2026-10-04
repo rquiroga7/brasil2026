@@ -50,6 +50,8 @@ ARCHIVO_VIVO_2026 = "escrutinio_zonas_2026.csv"
 ARCHIVO_HISTORICO = "historico_proyecciones_2026.csv"
 ARCHIVO_IMAGEN = "grafico_vivo_2026.png"
 ARCHIVO_JSON = "datos_proyeccion_2026.json"
+ARCHIVO_HIST_SWING = "historico_swing_2026.csv"
+ARCHIVO_IMG_SWING = "simulacion_swing_2026.png"
 
 CABECERA_HISTORICO = [
     "fecha_hora", "ambito", "codigo_ambito", "tipo", "escrutado_pct",
@@ -449,6 +451,52 @@ def graficar_desde_historico():
   fig.savefig(ARCHIVO_IMAGEN, dpi=120, bbox_inches="tight")
   plt.close(fig)
   print(f"[i] Gráfico actualizado: {ARCHIVO_IMAGEN}")
+
+
+def graficar_simulacion_swing():
+  """Fan chart: % proyectado (swing) de cada candidato según avanza el escrutinio."""
+  if not os.path.exists(ARCHIVO_HIST_SWING):
+    return
+  df = pd.read_csv(ARCHIVO_HIST_SWING)
+  if df.empty:
+    return
+
+  x = pd.to_numeric(df["escrutado_pct"], errors="coerce")
+  fig, ax = plt.subplots(figsize=(11, 6))
+
+  # Bandas de incertidumbre p5–p95 (Lula y Flavio)
+  for col, color in (("lula", "#E11B22"), ("flavio", "#4C8DFF")):
+    p5 = f"{col}_p5"
+    p95 = f"{col}_p95"
+    if p5 in df.columns and p95 in df.columns:
+      ax.fill_between(x, pd.to_numeric(df[p5], errors="coerce"),
+                      pd.to_numeric(df[p95], errors="coerce"),
+                      color=color, alpha=0.15, linewidth=0)
+
+  series = [("lula", "Lula", "#E11B22"), ("flavio", "Flavio", "#4C8DFF"),
+            ("otros", "Otros", "#7F7F7F")]
+  for col, nombre, color in series:
+    y = pd.to_numeric(df[f"{col}_pct"], errors="coerce")
+    ax.plot(x, y, "-", color=color, linewidth=2,
+            label=f"{nombre}: {y.iloc[-1]:.2f}% (proyectado)")
+    val = y.iloc[-1]
+    ax.axhline(val, color=color, linestyle=":", linewidth=1, alpha=0.7)
+    ax.text(101.5, val, f"{val:.1f}%", color=color, va="center", fontsize=9)
+
+  ax.set_xlim(0, 105)
+  ax.set_ylim(0, 65)
+  ax.set_yticks([0, 25, 50, 65])
+  ax.set_xlabel("% escrutado", fontsize=10)
+  ax.set_ylabel("Porcentaje proyectado (%)", fontsize=10)
+  ax.set_title("Simulación swing: proyección según avanza el escrutinio "
+               f"(última: {x.iloc[-1]:.2f}% contado)",
+               fontsize=11, fontweight="bold")
+  ax.grid(True, linestyle="--", alpha=0.5)
+  ax.legend(loc="upper left", fontsize=9, framealpha=0.8)
+  fig.tight_layout()
+  fig.savefig(ARCHIVO_IMG_SWING, dpi=120, bbox_inches="tight")
+  plt.close(fig)
+  print(f"[i] Simulación swing: {ARCHIVO_IMG_SWING}")
 
 
 def main():
