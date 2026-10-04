@@ -408,8 +408,8 @@ def graficar_desde_historico():
       ax.plot(x, d["otros_blancos_pct"], "-", color="#7F7F7F", linewidth=2,
               label=f"Otros+Blancos: {d['otros_blancos_pct'].iloc[-1]:.2f}%")
       ax.set_ylabel("Porcentaje (%)", fontsize=10)
-      ax.set_ylim(-2, 102)
-      ax.set_yticks([0, 25, 50, 75, 100])
+      ax.set_ylim(0, 65)
+      ax.set_yticks([0, 25, 50, 65])
     else:
       votos = (pd.to_numeric(d["lula_votos"], errors="coerce").fillna(0)
                + pd.to_numeric(d["bolsonaro_votos"], errors="coerce").fillna(0)
