@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proyección Elecciones Brasil 2026</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --lula:#E11B22; --flavio:#002B7F; --otros:#8a8a8a;
+    --bg:#fafafa; --card:#fff; --line:#e3e3e3; --muted:#6b7280;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#111417; --card:#1b1f24; --line:#2c333b; --muted:#9aa4b2; }
+  }
+  * { box-sizing: border-box; }
+  body { font-family: system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+         margin:0; padding:1.2rem; max-width:1180px; margin-inline:auto;
+         background:var(--bg); color:inherit; }
+  h1 { font-size:1.4rem; margin:0 0 .15rem; }
+  h2 { font-size:1rem; margin:0 0 .6rem; }
+  .sub { color:var(--muted); font-size:.85rem; margin-bottom:1rem; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+          gap:.8rem; margin-bottom:1rem; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px;
+          padding:.85rem 1rem; }
+  .card h3 { font-size:.74rem; text-transform:uppercase; letter-spacing:.05em;
+             color:var(--muted); margin:0 0 .3rem; font-weight:600; }
+  .val { font-size:1.55rem; font-weight:700; line-height:1.1; }
+  .small { color:var(--muted); font-size:.8rem; }
+  .lula { color:var(--lula); } .flavio { color:var(--flavio); } .otros { color:var(--otros); }
+  .pill { display:inline-block; font-size:.72rem; padding:.15rem .55rem; border-radius:999px;
+          background:#e8eefc; color:#26418a; }
+  .warn { background:#ffe8cc; color:#7a3b00; }
+  .panel { background:var(--card); border:1px solid var(--line); border-radius:12px;
+           padding:.9rem 1rem; margin-bottom:1rem; }
+  .toolbar { display:flex; flex-wrap:wrap; gap:.6rem; align-items:center;
+             margin-bottom:.6rem; }
+  .seg { display:inline-flex; border:1px solid var(--line); border-radius:999px; overflow:hidden; }
+  .seg button { border:0; background:transparent; padding:.35rem .8rem; cursor:pointer;
+                font-size:.82rem; color:inherit; }
+  .seg button.active { background:var(--lula); color:#fff; }
+  select,input { padding:.35rem .5rem; border:1px solid var(--line); border-radius:8px;
+                 background:var(--card); color:inherit; font-size:.85rem; }
+  table { width:100%; border-collapse:collapse; font-size:.85rem; }
+  th,td { text-align:left; padding:.4rem .5rem; border-bottom:1px solid var(--line);
+          white-space:nowrap; }
+  th { color:var(--muted); font-weight:600; cursor:pointer; user-select:none; }
+  td.num,th.num { text-align:right; }
+  .bar { display:flex; height:12px; width:130px; border-radius:6px; overflow:hidden;
+         background:var(--line); }
+  .bar span { height:100%; }
+  .barlbl { font-size:.72rem; color:var(--muted); }
+  canvas { max-height:300px; }
+  footer { color:var(--muted); font-size:.78rem; margin-top:1rem; }
+  code { background:rgba(127,127,127,.15); padding:.1rem .3rem; border-radius:4px; }
+</style>
+</head>
+<body>
+  <h1>Proyección Elecciones Brasil 2026 — Presidente (1er turno)</h1>
+  <div class="sub">
+    Datos oficiales TSE (EA20) · proyección por zona ·
+    <span id="actualizado">cargando…</span>
+    <span class="pill" id="control">–</span>
+  </div>
+
+  <div class="toolbar">
+    <div class="seg" id="seg_metodo">
+      <button data-m="swing" class="active">Swing (v2)</button>
+      <button data-m="v1">Estratificado (v1)</button>
+    </div>
+    <span class="small" id="nota_metodo"></span>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <h3>Escrutado</h3>
+      <div class="val" id="escrutado">–</div>
+      <div class="small" id="electores">–</div>
+    </div>
+    <div class="card">
+      <h3 id="h_lula">Proyectado · Lula</h3>
+      <div class="val lula" id="p_lula">–</div>
+      <div class="small" id="p_lula_v">–</div>
+    </div>
+    <div class="card">
+      <h3 id="h_flavio">Proyectado · Flavio</h3>
+      <div class="val flavio" id="p_flavio">–</div>
+      <div class="small" id="p_flavio_v">–</div>
+    </div>
+    <div class="card">
+      <h3>Proyectado · Otros</h3>
+      <div class="val otros" id="p_otros">–</div>
+      <div class="small" id="p_otros_v">–</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Proyección nacional <span class="small" id="metodo_nombre"></span></h2>
+    <canvas id="chart_nacional"></canvas>
+  </div>
+
+  <div class="panel">
+    <div class="toolbar">
+      <h2 style="margin:0">Por estado</h2>
+      <input id="buscar" placeholder="Buscar estado…" style="max-width:180px">
+      <select id="orden">
+        <option value="electores">Ordenar: electores</option>
+        <option value="escrutado">Ordenar: % escrutado</option>
+        <option value="lula">Ordenar: % Lula</option>
+        <option value="flavio">Ordenar: % Flavio</option>
+        <option value="nombre">Ordenar: nombre</option>
+      </select>
+    </div>
+    <table id="tabla">
+      <thead>
+        <tr>
+          <th>Estado</th>
+          <th class="num">Escrutado</th>
+          <th>Proyección (Lula / Flavio / Otros)</th>
+          <th class="num">Lula</th>
+          <th class="num">Flavio</th>
+        </tr>
+      </thead>
+      <tbody id="tabla_body"></tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <h2>Evolución temporal (v1)</h2>
+    <canvas id="chart_raw"></canvas>
+    <canvas id="chart_ext" style="margin-top:1rem"></canvas>
+  </div>
+
+  <footer>
+    Proyección no oficial con fines de análisis.
+    <b>v2 (swing)</b>: share 2022 por zona + swing observado por estado, sobre votos válidos
+    (excluye nulos y blancos), con intervalo p5–p95.
+    <b>v1 (estratificado)</b>: electores habilitados 2026 × % asistencia 2022, proporciones
+    observadas con fallback municipio → estado → nacional (excluye nulos).
+  </footer>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const DATOS_URL = (window.DATOS_URL && window.DATOS_URL.trim()) || "datos_web.json";
+const COLORES = { lula: "#E11B22", flavio: "#002B7F", otros: "#8a8a8a" };
+let datos = null;
+let metodo = "swing";
+let chartNacional = null, chartRaw = null, chartExt = null;
+let ordenActual = "electores";
+
+const $ = (id) => document.getElementById(id);
+const fmtPct = (v) => (v == null ? "–" : (v).toFixed(2) + "%");
+const fmtNum = (v) => (v == null ? "–" : Number(v).toLocaleString("es"));
+
+function etiqueta(t) { const p = String(t).split(" "); return p.length > 1 ? p[1] : String(t); }
+
+function bloqueMetodo(obj, m) { return obj && obj[m] ? obj[m] : obj; }
+
+function pintarNacional() {
+  if (!datos) return;
+  const nat = datos.nacional || {};
+  const b = bloqueMetodo(nat, metodo) || {};
+  $("escrutado").textContent = fmtPct(datos.escrutado_pct);
+  $("electores").textContent = "actualizado " + (datos.actualizado || "–");
+  const ctrl = $("control");
+  ctrl.textContent = datos.estado_control || "–";
+  ctrl.className = "pill" + ((datos.estado_control || "").includes("INCERTEZA") ? " warn" : "");
+
+  const etiquetaM = metodo === "swing" ? "swing (válidos)" : "estratificado v1";
+  $("metodo_nombre").textContent = "· método " + etiquetaM;
+  $("h_lula").textContent = "Proyectado · Lula (" + (metodo === "swing" ? "v2" : "v1") + ")";
+  $("h_flavio").textContent = "Proyectado · Flavio (" + (metodo === "swing" ? "v2" : "v1") + ")";
+
+  $("p_lula").textContent = fmtPct(b.lula && b.lula.pct);
+  $("p_flavio").textContent = fmtPct(b.flavio && b.flavio.pct);
+  $("p_otros").textContent = fmtPct(b.otros && b.otros.pct);
+  $("p_lula_v").textContent = (b.lula ? fmtNum(b.lula.votos) + " votos" : "–") +
+    (b.lula && b.lula.p5 != null ? "  [p5–p95: " + b.lula.p5.toFixed(1) + "–" + b.lula.p95.toFixed(1) + "%]" : "");
+  $("p_flavio_v").textContent = (b.flavio ? fmtNum(b.flavio.votos) + " votos" : "–") +
+    (b.flavio && b.flavio.p5 != null ? "  [p5–p95: " + b.flavio.p5.toFixed(1) + "–" + b.flavio.p95.toFixed(1) + "%]" : "");
+  $("p_otros_v").textContent = b.otros ? fmtNum(b.otros.votos) + " votos" : "–";
+
+  const labels = ["Lula", "Flavio", "Otros"];
+  const data = [b.lula ? b.lula.pct : 0, b.flavio ? b.flavio.pct : 0, b.otros ? b.otros.pct : 0];
+  if (!chartNacional) {
+    chartNacional = new Chart($("chart_nacional"), {
+      type: "bar",
+      data: { labels, datasets: [{ data, backgroundColor: [COLORES.lula, COLORES.flavio, COLORES.otros] }] },
+      options: { indexAxis: "y", animation: false, responsive: true,
+        plugins: { legend: { display: false },
+                   tooltip: { callbacks: { label: (c) => c.parsed.x.toFixed(2) + "%" } } },
+        scales: { x: { suggestedMax: 100, ticks: { callback: (v) => v + "%" } } } },
+    });
+  } else {
+    chartNacional.data.datasets[0].data = data;
+    chartNacional.update();
+  }
+}
+
+function filaBarra(b) {
+  const l = b.lula ? b.lula.pct : 0, f = b.flavio ? b.flavio.pct : 0, o = b.otros ? b.otros.pct : 0;
+  const t = Math.max(l + f + o, 0.001);
+  return `<div class="bar" title="Lula ${l.toFixed(1)}% · Flavio ${f.toFixed(1)}% · Otros ${o.toFixed(1)}%">
+    <span style="width:${(l/t*100).toFixed(1)}%;background:${COLORES.lula}"></span>
+    <span style="width:${(f/t*100).toFixed(1)}%;background:${COLORES.flavio}"></span>
+    <span style="width:${(o/t*100).toFixed(1)}%;background:${COLORES.otros}"></span>
+  </div>`;
+}
+
+function pintarTabla() {
+  if (!datos) return;
+  const q = ($("buscar").value || "").toLowerCase();
+  let filas = (datos.estados || []).filter((e) =>
+    (e.nombre + " " + e.uf).toLowerCase().includes(q));
+  const val = (e) => {
+    const b = bloqueMetodo(e, metodo) || {};
+    if (ordenActual === "lula") return b.lula ? b.lula.pct : 0;
+    if (ordenActual === "flavio") return b.flavio ? b.flavio.pct : 0;
+    if (ordenActual === "escrutado") return e.escrutado || 0;
+    if (ordenActual === "nombre") return 0;
+    return e.electores || 0;
+  };
+  if (ordenActual === "nombre") filas.sort((a, b) => a.nombre.localeCompare(b.nombre));
+  else filas.sort((a, b) => val(b) - val(a));
+
+  $("tabla_body").innerHTML = filas.map((e) => {
+    const b = bloqueMetodo(e, metodo) || {};
+    const l = b.lula ? b.lula.pct : 0, f = b.flavio ? b.flavio.pct : 0;
+    return `<tr>
+      <td><b>${e.nombre}</b> <span class="barlbl">${e.uf}</span></td>
+      <td class="num">${fmtPct(e.escrutado)}</td>
+      <td>${filaBarra(b)}</td>
+      <td class="num lula">${fmtPct(l)}</td>
+      <td class="num flavio">${fmtPct(f)}</td>
+    </tr>`;
+  }).join("");
+}
+
+function construirDatasets(serie, clave) {
+  return ["lula", "flavio", "otros"].map((k) => ({
+    label: k === "otros" ? "Otros+Blancos" : k[0].toUpperCase() + k.slice(1),
+    data: serie.map((s) => (s[clave] && s[clave][k] != null ? s[clave][k] : null)),
+    borderColor: COLORES[k], backgroundColor: COLORES[k],
+    borderWidth: 2, pointRadius: 0, tension: 0.15, spanGaps: true,
+  }));
+}
+function opcionesLinea() {
+  return { responsive: true, animation: false,
+    interaction: { mode: "index", intersect: false },
+    scales: { y: { suggestedMin: 0, suggestedMax: 100, ticks: { callback: (v) => v + "%" } },
+              x: { ticks: { maxTicksLimit: 8, maxRotation: 30 } } },
+    plugins: { legend: { position: "bottom" } } };
+}
+function pintarSeries() {
+  const serie = (datos && datos.serie) || [];
+  if (!chartRaw) chartRaw = new Chart($("chart_raw"),
+    { type: "line", data: { labels: [], datasets: construirDatasets([], "crudo") }, options: opcionesLinea() });
+  if (!chartExt) chartExt = new Chart($("chart_ext"),
+    { type: "line", data: { labels: [], datasets: construirDatasets([], "proyectado") }, options: opcionesLinea() });
+  const labels = serie.map((s) => etiqueta(s.t));
+  chartRaw.data.labels = labels; chartRaw.data.datasets = construirDatasets(serie, "crudo"); chartRaw.update();
+  chartExt.data.labels = labels; chartExt.data.datasets = construirDatasets(serie, "proyectado"); chartExt.update();
+}
+
+async function refrescar() {
+  try {
+    const sep = DATOS_URL.includes("?") ? "&" : "?";
+    const r = await fetch(DATOS_URL + sep + "t=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    datos = await r.json();
+    $("actualizado").textContent = "actualizado " + (datos.actualizado || "–");
+    $("nota_metodo").textContent = datos.swing_disponible
+      ? "swing activo (2022 disponible)"
+      : "swing no disponible: falta escrutinio_zonas_2022.csv (se muestra v1)";
+    if (!datos.swing_disponible) { metodo = "v1"; marcarSegmento(); }
+    pintarNacional(); pintarTabla(); pintarSeries();
+  } catch (e) {
+    $("actualizado").textContent = "sin datos todavía (" + e.message + ")";
+  }
+}
+
+function marcarSegmento() {
+  document.querySelectorAll("#seg_metodo button").forEach((b) =>
+    b.classList.toggle("active", b.dataset.m === metodo));
+}
+
+document.querySelectorAll("#seg_metodo button").forEach((b) =>
+  b.addEventListener("click", () => { metodo = b.dataset.m; marcarSegmento(); pintarNacional(); pintarTabla(); }));
+$("orden").addEventListener("change", (e) => { ordenActual = e.target.value; pintarTabla(); });
+$("buscar").addEventListener("input", pintarTabla);
+
+refrescar();
+setInterval(refrescar, 60000);
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+
+# Descargas pesadas del TSE (scrapingbrasil2022.py)
+dados_tse_2022/
+*.part
+
+# Paquete web generado localmente (se publica al endpoint sin caché)
+datos_web.json
+
+# Nota: los datos de resultados SÍ se pueden versionar si se desea:
+#   escrutinio_zonas_2026.csv, serie_temporal_2026.csv, padron_2026.csv,
+#   historico_proyecciones_2026.csv, datos_proyeccion_2026.json
