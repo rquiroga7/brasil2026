@@ -51,6 +51,7 @@ def main():
             inicio = time.time()
             correr("extrapolador10B_rodri.py", "--una-pasada")
             correr("proyeccion_swing.py")
+            correr("proyeccion_v3.py")
             correr("publicar_rodri.py")
             transcurrido = time.time() - inicio
             espera = max(0, PUBLISH_INTERVAL - transcurrido)

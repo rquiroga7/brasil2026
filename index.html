@@ -76,7 +76,8 @@
   <section id="tab-proj">
     <div class="toolbar">
       <div class="seg" id="seg_metodo">
-        <button data-m="swing" class="active">Swing (v2)</button>
+        <button data-m="v3" class="active">Zonas similares (v3)</button>
+        <button data-m="swing">Swing (v2)</button>
         <button data-m="v1">Estratificado (v1)</button>
       </div>
       <span class="small" id="nota_metodo"></span>
@@ -189,14 +190,18 @@
 <script>
 const DATOS_URL = (window.DATOS_URL && window.DATOS_URL.trim()) || "datos_web.json";
 const COLORES = { lula: "#E11B22", flavio: "#4C8DFF", otros: "#8a8a8a" };
-let datos = null, metodo = "swing", ordenActual = "electores", ordenCrudo = "escrutado";
+let datos = null, metodo = "v3", ordenActual = "electores", ordenCrudo = "escrutado";
 let chartRaw = null, chartExt = null, chartSwing = null;
 
 const $ = (id) => document.getElementById(id);
 const fmtPct = (v) => (v == null ? "–" : Number(v).toFixed(2) + "%");
 const fmtNum = (v) => (v == null ? "–" : Number(v).toLocaleString("es"));
 const etiqueta = (t) => { const p = String(t).split(" "); return p.length > 1 ? p[1] : String(t); };
-const bloqueMetodo = (obj, m) => (obj && obj[m] ? obj[m] : obj);
+const bloqueMetodo = (obj, m) => {
+  if (!obj) return {};
+  if (obj[m]) return obj[m];
+  return obj.swing || obj.v1 || obj;
+};
 
 function barra(b) {
   const l = (b.lula && b.lula.pct) || 0, f = (b.flavio && b.flavio.pct) || 0, o = (b.otros && b.otros.pct) || 0;
@@ -243,9 +248,11 @@ function pintarNacional() {
   ctrl.textContent = datos.estado_control || "–";
   ctrl.className = "pill" + ((datos.estado_control || "").includes("INCERTEZA") ? " warn" : "");
 
-  $("metodo_nombre").textContent = "· método " + (metodo === "swing" ? "swing (válidos)" : "estratificado v1");
-  $("h_lula").textContent = "Proyectado · Lula (" + (metodo === "swing" ? "v2" : "v1") + ")";
-  $("h_flavio").textContent = "Proyectado · Flavio (" + (metodo === "swing" ? "v2" : "v1") + ")";
+  const nombres = { v3: "v3 (zonas similares)", swing: "swing v2 (válidos)", v1: "estratificado v1" };
+  const etiq = { v3: "v3", swing: "v2", v1: "v1" };
+  $("metodo_nombre").textContent = "· método " + (nombres[metodo] || metodo);
+  $("h_lula").textContent = "Proyectado · Lula (" + (etiq[metodo] || metodo) + ")";
+  $("h_flavio").textContent = "Proyectado · Flavio (" + (etiq[metodo] || metodo) + ")";
   $("p_lula").textContent = fmtPct(b.lula && b.lula.pct);
   $("p_flavio").textContent = fmtPct(b.flavio && b.flavio.pct);
   $("p_otros").textContent = fmtPct(b.otros && b.otros.pct);
