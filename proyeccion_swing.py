@@ -106,7 +106,11 @@ def cargar_zonas_2022():
 def cargar_vivo_2026():
     if not os.path.exists(ARCHIVO_VIVO_2026):
         return None
-    df = pd.read_csv(ARCHIVO_VIVO_2026, encoding="utf-8")
+    try:
+        df = pd.read_csv(ARCHIVO_VIVO_2026, encoding="utf-8")
+    except (pd.errors.ParserError, OSError, ValueError):
+        print("[!] CSV en escritura por el raspador; se reintenta en el próximo ciclo.")
+        return None
     df["codigo_municipio"] = df["codigo_municipio"].map(normalizar_codigo)
     df["zona_electoral"] = df["zona_electoral"].map(normalizar_codigo)
     return df.sort_values("hora_local").drop_duplicates(

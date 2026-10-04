@@ -161,7 +161,11 @@ def ejecutar_extrapolacion():
     print(f"[-] Esperando por el archivo dinámico '{ARCHIVO_VIVO_2026}'...")
     return None
 
-  df_2026 = pd.read_csv(ARCHIVO_VIVO_2026, encoding="utf-8")
+  try:
+    df_2026 = pd.read_csv(ARCHIVO_VIVO_2026, encoding="utf-8")
+  except (pd.errors.ParserError, OSError, ValueError):
+    print("[!] CSV en escritura por el raspador; se reintenta en el próximo ciclo.")
+    return None
   if df_2026.empty:
     print("[!] Archivo de 2026 detectado pero aún sin registros de mesas.")
     return None
