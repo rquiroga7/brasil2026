@@ -40,6 +40,8 @@ if "--mostrar" not in sys.argv:
     matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
+from matplotlib.lines import Line2D
+import numpy as np
 import pandas as pd
 import requests  # noqa: F401  (se mantiene por si se amplía con descargas TSE)
 
@@ -453,8 +455,24 @@ def graficar_desde_historico():
   print(f"[i] Gráfico actualizado: {ARCHIVO_IMAGEN}")
 
 
+def _curva_proyeccion(x0, y0, fin, pendiente):
+  """Curva de convergencia (no lineal) desde el último punto contado hasta el final."""
+  if fin is None or pd.isna(fin) or x0 >= 100:
+    return None, None
+  fin = float(fin)
+  if abs(y0 - fin) < 1e-9:
+    return np.array([x0, 100.0]), np.array([y0, fin])
+  # exponente según la pendiente reciente observada (mejor que lineal)
+  p = -pendiente * (100.0 - x0) / (y0 - fin)
+  p = min(max(p, 0.5), 3.0)
+  xs = np.linspace(x0, 100.0, 120)
+  t = (xs - x0) / (100.0 - x0)
+  ys = fin + (y0 - fin) * (1.0 - t) ** p
+  return xs, ys
+
+
 def graficar_simulacion_swing():
-  """Trayectoria del % CONTADO (raw) vs % escrutado, proyectada al final swing (100%)."""
+  """% CONTADO (raw) vs % escrutado + proyección no lineal al final swing (100%)."""
   if not os.path.exists(ARCHIVO_HISTORICO):
     return
   df = pd.read_csv(ARCHIVO_HISTORICO)
@@ -479,21 +497,34 @@ def graficar_simulacion_swing():
             ("otros_blancos", "otros", "Otros", "#7F7F7F")]
 
   for col, key, nombre, color in series:
-    y = pd.to_numeric(crudo[f"{col}_pct"], errors="coerce")
-    ax.plot(x, y, "-", color=color, linewidth=2,
-            label=f"{nombre} (contado): {y.iloc[-1]:.2f}%")
+    yv = pd.to_numeric(crudo[f"{col}_pct"], errors="coerce")
+    mask = x.notna() & yv.notna()
+    xv = x[mask].to_numpy(dtype=float)
+    yvv = yv[mask].to_numpy(dtype=float)
+    if len(xv) == 0:
+      continue
+    ax.plot(xv, yvv, "-", color=color, linewidth=2,
+            label=f"{nombre} (contado): {yvv[-1]:.2f}%")
+
     fin = finales.get(key)
-    if fin is not None and not pd.isna(fin):
-      fin = float(fin)
-      # conecta el último valor contado con la predicción swing a 100%
-      ax.plot([x.iloc[-1], 100], [y.iloc[-1], fin], "--", color=color, linewidth=1.6)
+    if fin is None or pd.isna(fin):
+      continue
+    fin = float(fin)
+    pendiente = 0.0
+    if len(xv) >= 3:
+      n = min(len(xv), 8)
+      pendiente = float(np.polyfit(xv[-n:], yvv[-n:], 1)[0])
+    cx, cy = _curva_proyeccion(xv[-1], yvv[-1], fin, pendiente)
+    if cx is not None:
+      ax.plot(cx, cy, "--", color=color, linewidth=1.8)
       ax.plot([100], [fin], "o", color=color, markersize=5)
       ax.text(101.5, fin, f"{fin:.1f}%", color=color, va="center", fontsize=9)
+    # referencia lineal tenue
+    ax.plot([xv[-1], 100], [yvv[-1], fin], ":", color=color, linewidth=1, alpha=0.45)
     if key in bandas:
       lo, hi = bandas[key]
       try:
-        lo, hi = float(lo), float(hi)
-        ax.plot([100, 100], [lo, hi], color=color, linewidth=2)
+        ax.plot([100, 100], [float(lo), float(hi)], color=color, linewidth=2)
       except (TypeError, ValueError):
         pass
 
@@ -502,11 +533,28 @@ def graficar_simulacion_swing():
   ax.set_yticks([0, 25, 50, 65])
   ax.set_xlabel("% escrutado", fontsize=10)
   ax.set_ylabel("Porcentaje (%)", fontsize=10)
-  ax.set_title("Simulación: % contado (raw) y proyección swing a 100% "
-               f"(última: {x.iloc[-1]:.2f}% contado)",
-               fontsize=11, fontweight="bold")
+  ax.set_title("Simulación: % contado (raw) y proyección al final swing a 100% "
+               f"(última: {x.iloc[-1]:.2f}% contado)", fontsize=11, fontweight="bold")
   ax.grid(True, linestyle="--", alpha=0.5)
-  ax.legend(loc="upper left", fontsize=9, framealpha=0.8)
+
+  # Leyenda 1 (arriba-izquierda): series contadas
+  leg1 = ax.legend(loc="upper left", fontsize=9, framealpha=0.85)
+  ax.add_artist(leg1)
+
+  # Leyenda 2 (arriba-derecha): resultados proyectados a 100%
+  handles2 = []
+  for key, nombre, color in [("lula", "Lula", "#E11B22"),
+                             ("flavio", "Flavio", "#4C8DFF"),
+                             ("otros", "Otros", "#7F7F7F")]:
+    fin = finales.get(key)
+    if fin is None or pd.isna(fin):
+      continue
+    handles2.append(Line2D([], [], color=color, marker="o", linestyle="none",
+                           markersize=7, label=f"{nombre}: {float(fin):.2f}%"))
+  if handles2:
+    ax.legend(handles=handles2, loc="upper right", fontsize=9, framealpha=0.85,
+              title="Proyección a 100%", title_fontsize=9)
+
   fig.tight_layout()
   fig.savefig(ARCHIVO_IMG_SWING, dpi=120, bbox_inches="tight")
   plt.close(fig)
