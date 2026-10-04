@@ -108,7 +108,7 @@ def cargar_linea_base_2022():
 
 def calcular_fallbacks_jerarquicos(df_2026_actual):
   dict_fallbacks = {
-      "nacional": {"Lula": 0.50, "Flavio": 0.40, "OtrosBlancos": 0.10},
+      "nacional": {"Lula": 0.50, "Flavio": 0.40, "Otros": 0.10},
       "estado": {},
       "municipio": {},
   }
@@ -124,17 +124,23 @@ def calcular_fallbacks_jerarquicos(df_2026_actual):
         if "votos_nulos" in df_grupo.columns
         else 0
     )
+    v_blancos = (
+        df_grupo["votos_blancos"].sum()
+        if "votos_blancos" in df_grupo.columns
+        else 0
+    )
     v_totales = df_grupo["votos_totales"].sum()
-    denominador = v_totales - v_nulos
+    # Válidos = total - nulos - blancos (comparable con el swing v2).
+    denominador = v_totales - v_nulos - v_blancos
 
     if denominador == 0:
-      return {"Lula": 0.35, "Flavio": 0.35, "OtrosBlancos": 0.30}
+      return {"Lula": 0.35, "Flavio": 0.35, "Otros": 0.30}
 
-    v_otros_blancos = denominador - v_lula - v_bols
+    v_otros = denominador - v_lula - v_bols
     return {
         "Lula": v_lula / denominador,
         "Flavio": v_bols / denominador,
-        "OtrosBlancos": v_otros_blancos / denominador,
+        "Otros": v_otros / denominador,
     }
 
   dict_fallbacks["nacional"] = extraer_proporciones(df_2026_actual)
@@ -186,7 +192,7 @@ def ejecutar_extrapolacion():
   electores_2026 = cargar_electores_habilitados_2026(df_2026_ultimos)
 
   dict_vivo_2026 = {}
-  total_lula_crudo = total_bols_crudo = total_nulos_crudo = 0
+  total_lula_crudo = total_bols_crudo = total_nulos_crudo = total_blancos_crudo = 0
   total_votos_totales_crudo = 0
 
   for _, fila in df_2026_ultimos.iterrows():
@@ -196,18 +202,21 @@ def ejecutar_extrapolacion():
     l = int(fila["Lula"])
     b = int(fila["Flavio_Bolsonaro"])
     n = int(fila["votos_nulos"]) if "votos_nulos" in fila else 0
+    bl = int(fila["votos_blancos"]) if "votos_blancos" in fila else 0
     dict_vivo_2026[(m, z)] = {
-        "votos_totales": tot, "Lula": l, "Flavio": b, "votos_nulos": n,
+        "votos_totales": tot, "Lula": l, "Flavio": b,
+        "votos_nulos": n, "votos_blancos": bl,
     }
     total_lula_crudo += l
     total_bols_crudo += b
     total_nulos_crudo += n
+    total_blancos_crudo += bl
     total_votos_totales_crudo += tot
 
-  total_validos_blancos_crudo = total_votos_totales_crudo - total_nulos_crudo
-  total_otros_blancos_crudo = (
-      total_validos_blancos_crudo - total_lula_crudo - total_bols_crudo
+  total_validos_crudo = (
+      total_votos_totales_crudo - total_nulos_crudo - total_blancos_crudo
   )
+  total_otros_crudo = total_validos_crudo - total_lula_crudo - total_bols_crudo
 
   proyecciones_zonales = []
   zonas_nivel_directo = zonas_nivel_municipio = 0
@@ -232,31 +241,32 @@ def ejecutar_extrapolacion():
     if llave in dict_vivo_2026 and dict_vivo_2026[llave]["votos_totales"] > 0:
       v_tot = dict_vivo_2026[llave]["votos_totales"]
       v_nul = dict_vivo_2026[llave]["votos_nulos"]
-      denominador_zona = v_tot - v_nul
+      v_bl = dict_vivo_2026[llave]["votos_blancos"]
+      denominador_zona = v_tot - v_nul - v_bl
       if denominador_zona > 0:
         prop_lula = dict_vivo_2026[llave]["Lula"] / denominador_zona
         prop_flavio = dict_vivo_2026[llave]["Flavio"] / denominador_zona
-        prop_otros_blancos = (
+        prop_otros = (
             denominador_zona - dict_vivo_2026[llave]["Lula"]
             - dict_vivo_2026[llave]["Flavio"]
         ) / denominador_zona
       else:
-        prop_lula, prop_flavio, prop_otros_blancos = 0, 0, 0
+        prop_lula, prop_flavio, prop_otros = 0, 0, 0
       zonas_nivel_directo += 1
     elif m in fallbacks["municipio"]:
       prop_lula = fallbacks["municipio"][m]["Lula"]
       prop_flavio = fallbacks["municipio"][m]["Flavio"]
-      prop_otros_blancos = fallbacks["municipio"][m]["OtrosBlancos"]
+      prop_otros = fallbacks["municipio"][m]["Otros"]
       zonas_nivel_municipio += 1
     elif uf in fallbacks["estado"]:
       prop_lula = fallbacks["estado"][uf]["Lula"]
       prop_flavio = fallbacks["estado"][uf]["Flavio"]
-      prop_otros_blancos = fallbacks["estado"][uf]["OtrosBlancos"]
+      prop_otros = fallbacks["estado"][uf]["Otros"]
       zonas_nivel_estado += 1
     else:
       prop_lula = fallbacks["nacional"]["Lula"]
       prop_flavio = fallbacks["nacional"]["Flavio"]
-      prop_otros_blancos = fallbacks["nacional"]["OtrosBlancos"]
+      prop_otros = fallbacks["nacional"]["Otros"]
       zonas_nivel_nacional += 1
 
     proyecciones_zonales.append({
@@ -264,7 +274,7 @@ def ejecutar_extrapolacion():
         "codigo_municipio": m,
         "proj_lula": asistencia_estimada_2026 * prop_lula,
         "proj_flavio": asistencia_estimada_2026 * prop_flavio,
-        "proj_otros_blancos": asistencia_estimada_2026 * prop_otros_blancos,
+        "proj_otros": asistencia_estimada_2026 * prop_otros,
         "peso_asistencia": asistencia_estimada_2026,
     })
 
@@ -272,7 +282,7 @@ def ejecutar_extrapolacion():
 
   total_lula_ext = df_proj["proj_lula"].sum()
   total_flavio_ext = df_proj["proj_flavio"].sum()
-  total_otros_ext = df_proj["proj_otros_blancos"].sum()
+  total_otros_ext = df_proj["proj_otros"].sum()
   total_peso_ext = df_proj["peso_asistencia"].sum()
 
   pct_escrutado = (
@@ -294,9 +304,9 @@ def ejecutar_extrapolacion():
   def pct(parte, total):
     return parte / total * 100 if total else 0.0
 
-  pct_l_crudo = pct(total_lula_crudo, total_validos_blancos_crudo)
-  pct_f_crudo = pct(total_bols_crudo, total_validos_blancos_crudo)
-  pct_o_crudo = pct(total_otros_blancos_crudo, total_validos_blancos_crudo)
+  pct_l_crudo = pct(total_lula_crudo, total_validos_crudo)
+  pct_f_crudo = pct(total_bols_crudo, total_validos_crudo)
+  pct_o_crudo = pct(total_otros_crudo, total_validos_crudo)
   pct_l_ext = pct(total_lula_ext, total_peso_ext)
   pct_f_ext = pct(total_flavio_ext, total_peso_ext)
   pct_o_ext = pct(total_otros_ext, total_peso_ext)
@@ -317,7 +327,7 @@ def ejecutar_extrapolacion():
         fecha_hora_local, "nacional", "BR", "crudo", round(pct_escrutado, 4),
         total_lula_crudo, round(pct_l_crudo, 4),
         total_bols_crudo, round(pct_f_crudo, 4),
-        total_otros_blancos_crudo, round(pct_o_crudo, 4),
+        total_otros_crudo, round(pct_o_crudo, 4),
     ])
 
   resultado = {
@@ -335,7 +345,7 @@ def ejecutar_extrapolacion():
       "crudo": {
           "lula": {"votos": total_lula_crudo, "pct": round(pct_l_crudo, 2)},
           "flavio": {"votos": total_bols_crudo, "pct": round(pct_f_crudo, 2)},
-          "otros": {"votos": total_otros_blancos_crudo, "pct": round(pct_o_crudo, 2)},
+          "otros": {"votos": total_otros_crudo, "pct": round(pct_o_crudo, 2)},
       },
       "proyectado": {
           "lula": {"votos": int(total_lula_ext), "pct": round(pct_l_ext, 2)},
@@ -354,7 +364,7 @@ def ejecutar_extrapolacion():
   print("=" * 74)
   print(f"RAW (TSE)   | {total_lula_crudo:>10,} ({pct_l_crudo:5.2f}%) |"
         f" {total_bols_crudo:>10,} ({pct_f_crudo:5.2f}%) |"
-        f" {total_otros_blancos_crudo:>10,} ({pct_o_crudo:5.2f}%)")
+        f" {total_otros_crudo:>10,} ({pct_o_crudo:5.2f}%)")
   print(f"PROYECTADO  | {int(total_lula_ext):>10,} ({pct_l_ext:5.2f}%) |"
         f" {int(total_flavio_ext):>10,} ({pct_f_ext:5.2f}%) |"
         f" {int(total_otros_ext):>10,} ({pct_o_ext:5.2f}%)")
@@ -406,7 +416,7 @@ def graficar_desde_historico():
       ax.plot(x, d["bolsonaro_pct"], "-", color="#4C8DFF", linewidth=2,
               label=f"Flavio: {d['bolsonaro_pct'].iloc[-1]:.2f}%")
       ax.plot(x, d["otros_blancos_pct"], "-", color="#7F7F7F", linewidth=2,
-              label=f"Otros+Blancos: {d['otros_blancos_pct'].iloc[-1]:.2f}%")
+              label=f"Otros: {d['otros_blancos_pct'].iloc[-1]:.2f}%")
       ax.set_ylabel("Porcentaje (%)", fontsize=10)
       ax.set_ylim(0, 65)
       ax.set_yticks([0, 25, 50, 65])

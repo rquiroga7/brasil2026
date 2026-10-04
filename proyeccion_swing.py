@@ -261,19 +261,19 @@ def proyectar():
         state_idx[i] = uf_idx.get(uf, 0)
 
         lv = live.get(clave)
-        # --- v1 shares (denominador: total - nulos) ---
-        if lv and lv["total"] - lv["nulos"] > 0:
-            d = lv["total"] - lv["nulos"]
+        # --- v1 shares (denominador: válidos = total - nulos - blancos) ---
+        if lv and lv["total"] - lv["nulos"] - lv["blancos"] > 0:
+            d = lv["total"] - lv["nulos"] - lv["blancos"]
             v1sh[i] = [lv["l"]/d, lv["f"]/d, (d - lv["l"] - lv["f"])/d]
         elif m in fb_v1["municipio"]:
             v1sh[i] = [fb_v1["municipio"][m]["Lula"], fb_v1["municipio"][m]["Flavio"],
-                       fb_v1["municipio"][m]["OtrosBlancos"]]
+                       fb_v1["municipio"][m]["Otros"]]
         elif uf in fb_v1["estado"]:
             v1sh[i] = [fb_v1["estado"][uf]["Lula"], fb_v1["estado"][uf]["Flavio"],
-                       fb_v1["estado"][uf]["OtrosBlancos"]]
+                       fb_v1["estado"][uf]["Otros"]]
         else:
             v1sh[i] = [fb_v1["nacional"]["Lula"], fb_v1["nacional"]["Flavio"],
-                       fb_v1["nacional"]["OtrosBlancos"]]
+                       fb_v1["nacional"]["Otros"]]
 
         # --- v2: escrutado directo ---
         if lv and lv["valid"] > 0:

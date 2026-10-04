@@ -185,7 +185,7 @@
 const DATOS_URL = (window.DATOS_URL && window.DATOS_URL.trim()) || "datos_web.json";
 const COLORES = { lula: "#E11B22", flavio: "#4C8DFF", otros: "#8a8a8a" };
 let datos = null, metodo = "swing", ordenActual = "electores", ordenCrudo = "escrutado";
-let chartNacional = null, chartCrudo = null, chartRaw = null, chartExt = null;
+let chartRaw = null, chartExt = null;
 
 const $ = (id) => document.getElementById(id);
 const fmtPct = (v) => (v == null ? "–" : Number(v).toFixed(2) + "%");
@@ -203,10 +203,12 @@ function barra(b) {
   </div>`;
 }
 
-function barChart(canvasId, ref, b) {
+const _barCharts = {};
+function barChart(canvasId, b) {
   const data = [b.lula ? b.lula.pct : 0, b.flavio ? b.flavio.pct : 0, b.otros ? b.otros.pct : 0];
-  if (!ref.chart) {
-    ref.chart = new Chart($(canvasId), {
+  let ch = _barCharts[canvasId];
+  if (!ch) {
+    ch = new Chart($(canvasId), {
       type: "bar",
       data: { labels: ["Lula", "Flavio", "Otros"],
               datasets: [{ data, backgroundColor: [COLORES.lula, COLORES.flavio, COLORES.otros] }] },
@@ -215,9 +217,10 @@ function barChart(canvasId, ref, b) {
                    tooltip: { callbacks: { label: (c) => c.parsed.x.toFixed(2) + "%" } } },
         scales: { x: { suggestedMax: 100, ticks: { callback: (v) => v + "%" } } } },
     });
+    _barCharts[canvasId] = ch;
   } else {
-    ref.chart.data.datasets[0].data = data;
-    ref.chart.update();
+    ch.data.datasets[0].data = data;
+    ch.update();
   }
 }
 
@@ -246,7 +249,7 @@ function pintarNacional() {
   $("p_flavio_v").textContent = (b.flavio ? fmtNum(b.flavio.votos) + " votos" : "–") +
     (b.flavio && b.flavio.p5 != null ? "  [p5–p95: " + b.flavio.p5.toFixed(1) + "–" + b.flavio.p95.toFixed(1) + "%]" : "");
   $("p_otros_v").textContent = b.otros ? fmtNum(b.otros.votos) + " votos" : "–";
-  barChart("chart_nacional", window, b);
+  barChart("chart_nacional", b);
 }
 
 function pintarTabla() {
@@ -289,7 +292,7 @@ function pintarCrudo() {
   $("c_lula_v").textContent = c.lula ? fmtNum(c.lula.votos) + " votos" : "–";
   $("c_flavio_v").textContent = c.flavio ? fmtNum(c.flavio.votos) + " votos" : "–";
   $("c_otros_v").textContent = c.otros ? fmtNum(c.otros.votos) + " votos" : "–";
-  barChart("chart_crudo", window, c);
+  barChart("chart_crudo", c);
 }
 
 function pintarTablaCrudo() {
@@ -322,7 +325,7 @@ function pintarTablaCrudo() {
 // ---------- Series ----------
 function construirDatasets(serie, clave) {
   return ["lula", "flavio", "otros"].map((k) => ({
-    label: k === "otros" ? "Otros+Blancos" : k[0].toUpperCase() + k.slice(1),
+    label: k === "otros" ? "Otros" : k[0].toUpperCase() + k.slice(1),
     data: serie.map((s) => (s[clave] && s[clave][k] != null ? s[clave][k] : null)),
     borderColor: COLORES[k], backgroundColor: COLORES[k],
     borderWidth: 2, pointRadius: 0, tension: 0.15, spanGaps: true,
