@@ -7,7 +7,7 @@
 <style>
   :root {
     color-scheme: light dark;
-    --lula:#E11B22; --flavio:#002B7F; --otros:#8a8a8a;
+    --lula:#E11B22; --flavio:#4C8DFF; --otros:#8a8a8a;
     --bg:#fafafa; --card:#fff; --line:#e3e3e3; --muted:#6b7280; --accent:#26418a;
   }
   @media (prefers-color-scheme: dark) {
@@ -183,7 +183,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
 const DATOS_URL = (window.DATOS_URL && window.DATOS_URL.trim()) || "datos_web.json";
-const COLORES = { lula: "#E11B22", flavio: "#002B7F", otros: "#8a8a8a" };
+const COLORES = { lula: "#E11B22", flavio: "#4C8DFF", otros: "#8a8a8a" };
 let datos = null, metodo = "swing", ordenActual = "electores", ordenCrudo = "escrutado";
 let chartNacional = null, chartCrudo = null, chartRaw = null, chartExt = null;
 
@@ -227,7 +227,10 @@ function pintarNacional() {
   const nat = datos.nacional || {};
   const b = bloqueMetodo(nat, metodo) || {};
   $("escrutado").textContent = fmtPct(datos.escrutado_pct);
-  $("electores").textContent = "actualizado " + (datos.actualizado || "–");
+  const cc = (nat && nat.crudo) || datos.crudo || {};
+  $("electores").textContent = (cc.total != null
+    ? fmtNum(cc.total) + " votos contados · " + fmtNum(cc.validos) + " válidos"
+    : "–");
   const ctrl = $("control");
   ctrl.textContent = datos.estado_control || "–";
   ctrl.className = "pill" + ((datos.estado_control || "").includes("INCERTEZA") ? " warn" : "");
