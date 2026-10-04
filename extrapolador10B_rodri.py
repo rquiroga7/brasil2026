@@ -491,7 +491,7 @@ def graficar_simulacion_swing():
       bandas = {"lula": (last.get("lula_p5"), last.get("lula_p95")),
                 "flavio": (last.get("flavio_p5"), last.get("flavio_p95"))}
 
-  fig, ax = plt.subplots(figsize=(11, 6))
+  fig, ax = plt.subplots(figsize=(10, 7.5))
   series = [("lula", "lula", "Lula", "#E11B22"),
             ("bolsonaro", "flavio", "Flavio", "#4C8DFF"),
             ("otros_blancos", "otros", "Otros", "#7F7F7F")]
