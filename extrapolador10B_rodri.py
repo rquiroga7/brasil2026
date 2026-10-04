@@ -367,7 +367,7 @@ def ejecutar_extrapolacion():
 
 
 def graficar_desde_historico():
-  """Reconstruye el gráfico (RAW, v1 y swing) a partir del historial CSV."""
+  """Reconstruye el gráfico (RAW, v1, swing y votos contados) desde el historial."""
   if not os.path.exists(ARCHIVO_HISTORICO):
     return
   df = pd.read_csv(ARCHIVO_HISTORICO)
@@ -380,36 +380,52 @@ def graficar_desde_historico():
 
   paneles = []
   if not df_crudo.empty:
-    paneles.append((df_crudo,
+    paneles.append(("pct", df_crudo,
                     f"VOTOS RAW EN VIVO - TSE (última: {df_crudo['fecha_hora'].iloc[-1]}, "
                     f"escrutado {df_crudo['escrutado_pct'].iloc[-1]:.2f}%)"))
   if not df_ext.empty:
-    paneles.append((df_ext,
+    paneles.append(("pct", df_ext,
                     "PROYECCIÓN v1 ESTRATIFICADA (candidatos + blancos, excluye nulos)"))
   if not df_swing.empty:
-    paneles.append((df_swing,
+    paneles.append(("pct", df_swing,
                     "PROYECCIÓN SWING v2 (2022 + swing observado, votos válidos)"))
+  if not df_crudo.empty:
+    paneles.append(("votos", df_crudo, "VOTOS CONTADOS ACUMULADOS (TSE)"))
   if not paneles:
     return
 
-  fig, axes = plt.subplots(len(paneles), 1, figsize=(11, 4 * len(paneles)))
+  fig, axes = plt.subplots(len(paneles), 1, figsize=(11, 3.3 * len(paneles)))
   if len(paneles) == 1:
     axes = [axes]
 
-  for ax, (d, titulo) in zip(axes, paneles):
+  for ax, (tipo, d, titulo) in zip(axes, paneles):
     x = list(range(1, len(d) + 1))
-    ax.plot(x, d["lula_pct"], "-", color="#E11B22", linewidth=2,
-            label=f"Lula: {d['lula_pct'].iloc[-1]:.2f}%")
-    ax.plot(x, d["bolsonaro_pct"], "-", color="#4C8DFF", linewidth=2,
-            label=f"Flavio: {d['bolsonaro_pct'].iloc[-1]:.2f}%")
-    ax.plot(x, d["otros_blancos_pct"], "-", color="#7F7F7F", linewidth=2,
-            label=f"Otros+Blancos: {d['otros_blancos_pct'].iloc[-1]:.2f}%")
+    if tipo == "pct":
+      ax.plot(x, d["lula_pct"], "-", color="#E11B22", linewidth=2,
+              label=f"Lula: {d['lula_pct'].iloc[-1]:.2f}%")
+      ax.plot(x, d["bolsonaro_pct"], "-", color="#4C8DFF", linewidth=2,
+              label=f"Flavio: {d['bolsonaro_pct'].iloc[-1]:.2f}%")
+      ax.plot(x, d["otros_blancos_pct"], "-", color="#7F7F7F", linewidth=2,
+              label=f"Otros+Blancos: {d['otros_blancos_pct'].iloc[-1]:.2f}%")
+      ax.set_ylabel("Porcentaje (%)", fontsize=10)
+      ax.set_ylim(-2, 102)
+      ax.set_yticks([0, 25, 50, 75, 100])
+    else:
+      votos = (pd.to_numeric(d["lula_votos"], errors="coerce").fillna(0)
+               + pd.to_numeric(d["bolsonaro_votos"], errors="coerce").fillna(0)
+               + pd.to_numeric(d["otros_blancos_votos"], errors="coerce").fillna(0))
+      ax.plot(x, votos, "-", color="#2E7D32", linewidth=2,
+              label=f"Contados: {int(votos.iloc[-1]):,}".replace(",", "."))
+      ax.fill_between(x, votos, color="#2E7D32", alpha=0.15)
+      ax.set_ylabel("Votos contados", fontsize=10)
+      ax.yaxis.set_major_formatter(
+          ticker.FuncFormatter(
+              lambda v, p: f"{v/1e6:.1f}M" if v >= 1e6 else f"{int(v):,}".replace(",", ".")))
+      ax.set_ylim(0, max(float(votos.max()) * 1.1, 1.0))
     ax.set_title(titulo, fontsize=11, fontweight="bold")
-    ax.set_ylabel("Porcentaje (%)", fontsize=10)
-    ax.set_ylim(-2, 102)
-    ax.set_yticks([0, 25, 50, 75, 100])
     ax.grid(True, linestyle="--", alpha=0.5)
-    ax.legend(loc="upper right", fontsize=9, framealpha=0.8)
+    ax.legend(loc="upper left" if tipo == "votos" else "upper right",
+              fontsize=9, framealpha=0.8)
     ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=8, integer=True))
     etiquetas = d["fecha_hora"].tolist()
     ax.xaxis.set_major_formatter(
