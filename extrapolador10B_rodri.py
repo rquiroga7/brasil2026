@@ -424,8 +424,7 @@ def graficar_desde_historico():
       ax.set_ylim(0, max(float(votos.max()) * 1.1, 1.0))
     ax.set_title(titulo, fontsize=11, fontweight="bold")
     ax.grid(True, linestyle="--", alpha=0.5)
-    ax.legend(loc="upper left" if tipo == "votos" else "upper right",
-              fontsize=9, framealpha=0.8)
+    ax.legend(loc="upper left", fontsize=9, framealpha=0.8)
     ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=8, integer=True))
     etiquetas = d["fecha_hora"].tolist()
     ax.xaxis.set_major_formatter(
