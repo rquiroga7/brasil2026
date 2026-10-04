@@ -94,7 +94,7 @@ HEADERS = {
 }
 
 # === GOBERNADOR DE TRÁFICO (el TSE tolera ~100 req/s; somos conservadores) ===
-LIMITE_REQ_POR_SEGUNDO = 20
+LIMITE_REQ_POR_SEGUNDO = 60
 _peticiones_segundo = 0
 _segundo_actual = int(time.time())
 
