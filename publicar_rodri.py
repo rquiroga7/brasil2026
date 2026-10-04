@@ -1,27 +1,34 @@
 # -*- coding: utf-8 -*-
 """
-publicar_rodri.py — Construye el paquete web y lo publica en un endpoint sin caché.
+publicar_rodri.py — Construye el paquete web y lo publica.
 
-Lee los resultados del extrapolador y arma un JSON compacto con:
-  * el último estado (escrutado, control, crudo, proyectado, zonas)
+Lee los resultados del extrapolador/proyección y arma un JSON compacto con:
+  * el último estado (escrutado, control, crudo, proyecciones, zonas)
   * la serie temporal completa (para dibujar la evolución en el navegador)
 
-Siempre escribe 'datos_web.json' en local (sirve de respaldo/desarrollo) y,
-si existe la variable de entorno PUBLISH_URL, lo sube por HTTP.
+Siempre escribe 'datos_web.json' en local y luego lo publica por una de estas vías:
 
-Variables de entorno (nada de secretos en el código):
-  PUBLISH_URL     p.ej. https://escrutinio-2026.tu-subdominio.workers.dev/datos
-  PUBLISH_TOKEN   token secreto (se envía como 'Authorization: Bearer ...')
-  PUBLISH_METHOD  PUT (por defecto) o POST
+  A) Endpoint HTTP sin caché (opcional):
+       PUBLISH_URL     p.ej. https://...workers.dev/datos
+       PUBLISH_TOKEN   se envía como 'Authorization: Bearer ...'
+       PUBLISH_METHOD  PUT (por defecto) o POST
 
-Con GitHub Pages solo sirviendo el HTML/JS estático, el navegador consulta
-PUBLISH_URL cada 60 s y obtiene datos siempre frescos (Cache-Control: no-store).
+  B) Git (GitHub-only, sin servicios externos):
+       PUBLISH_MODE=git  (o PUBLISH_GIT=1)
+       GIT_DATA_BRANCH   rama de datos (por defecto 'data')
+       GIT_REMOTE        remoto (por defecto 'origin')
+       GIT_FORCE         1 (por defecto) => commit huérfano único + force-push,
+                         para que el historial NO crezca y no dispare builds de Pages.
+
+El dashboard (GitHub Pages, estático) lee el JSON con cache-busting desde:
+  https://raw.githubusercontent.com/<user>/<repo>/<rama>/datos_web.json
 """
 
 import os
 import csv
 import json
 import sys
+import subprocess
 from datetime import datetime
 
 import requests
@@ -83,7 +90,6 @@ def construir_payload():
 
     nacional = swing.get("nacional")
     if not nacional:
-        # Sin proyección swing: reutilizamos la v1 como única serie.
         nacional = {"escrutado": v1.get("escrutado_pct"),
                     "v1": v1.get("proyectado"), "swing": v1.get("proyectado")}
 
@@ -103,23 +109,15 @@ def construir_payload():
     return payload
 
 
-def publicar(payload):
-    url = os.environ.get("PUBLISH_URL", "").strip()
-    with open(ARCHIVO_WEB, "w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False)
-    print(f"[i] Paquete web local escrito: {ARCHIVO_WEB} "
-          f"({len(payload.get('serie', []))} puntos de serie)")
-
-    if not url:
-        print("[i] PUBLISH_URL no definido: no se sube a Internet (modo local).")
-        return True
-
+# --------------------------------------------------------------------------
+# Publicación por HTTP (endpoint sin caché)
+# --------------------------------------------------------------------------
+def publicar_http(payload, url):
     headers = {"Content-Type": "application/json", "Cache-Control": "no-store"}
     token = os.environ.get("PUBLISH_TOKEN", "").strip()
     if token:
         headers["Authorization"] = f"Bearer {token}"
     metodo = os.environ.get("PUBLISH_METHOD", "PUT").upper()
-
     try:
         r = requests.request(
             metodo, url,
@@ -133,6 +131,93 @@ def publicar(payload):
     except requests.RequestException as e:
         print(f"[!] Error al publicar: {e}")
     return False
+
+
+# --------------------------------------------------------------------------
+# Publicación por Git (GitHub-only)
+# --------------------------------------------------------------------------
+def _git(*args, input=None):
+    return subprocess.run(["git", *args], input=input, capture_output=True, text=True)
+
+
+def publicar_git(archivo, branch="data", remote="origin", force=True):
+    """Sube un único archivo a una rama, sin tocar el árbol de trabajo.
+
+    Con force=True crea un commit huérfano (sin padre) y hace force-push: la rama
+    queda con un solo commit, el historial no crece y no se disparan builds de
+    GitHub Pages (esa rama no es la fuente del sitio)."""
+    if not os.path.exists(".git"):
+        print("[!] No hay repositorio git (.git). Ejecuta 'git init' primero.")
+        return False
+
+    r = _git("hash-object", "-w", archivo)
+    if r.returncode != 0:
+        print(f"[!] git hash-object falló: {r.stderr.strip()}")
+        return False
+    blob = r.stdout.strip()
+
+    nombre = os.path.basename(archivo)
+    r = _git("mktree", input=f"100644 blob {blob}\t{nombre}\n")
+    if r.returncode != 0:
+        print(f"[!] git mktree falló: {r.stderr.strip()}")
+        return False
+    tree = r.stdout.strip()
+
+    args = ["commit-tree", tree]
+    if not force:
+        prev = _git("rev-parse", f"refs/heads/{branch}")
+        if prev.returncode == 0 and prev.stdout.strip():
+            args += ["-p", prev.stdout.strip()]
+    args += ["-m", f"datos {datetime.now().astimezone().isoformat()}"]
+    r = _git(*args)
+    if r.returncode != 0:
+        print(f"[!] git commit-tree falló: {r.stderr.strip()}")
+        return False
+    commit = r.stdout.strip()
+
+    r = _git("update-ref", f"refs/heads/{branch}", commit)
+    if r.returncode != 0:
+        print(f"[!] git update-ref falló: {r.stderr.strip()}")
+        return False
+
+    push = ["push"]
+    if force:
+        push.append("--force")
+    push += [remote, f"refs/heads/{branch}:refs/heads/{branch}"]
+    r = _git(*push)
+    if r.returncode == 0:
+        print(f"[✓] {nombre} subido a {remote}/{branch}")
+        return True
+    print(f"[!] git push falló: {r.stderr.strip()[:300]}")
+    return False
+
+
+# --------------------------------------------------------------------------
+def publicar(payload):
+    with open(ARCHIVO_WEB, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False)
+    print(f"[i] Paquete web local escrito: {ARCHIVO_WEB} "
+          f"({len(payload.get('serie', []))} puntos de serie)")
+
+    url = os.environ.get("PUBLISH_URL", "").strip()
+    modo = os.environ.get("PUBLISH_MODE", "").strip().lower()
+    hacer_git = modo == "git" or os.environ.get("PUBLISH_GIT", "") == "1"
+
+    if not url and not hacer_git:
+        print("[i] Sin PUBLISH_URL ni PUBLISH_MODE=git: solo se escribió en local.")
+        return True
+
+    ok = True
+    if url:
+        ok = publicar_http(payload, url) and ok
+    if hacer_git:
+        ok = publicar_git(
+            ARCHIVO_WEB,
+            branch=os.environ.get("GIT_DATA_BRANCH", "data"),
+            remote=os.environ.get("GIT_REMOTE", "origin"),
+            force=os.environ.get("GIT_FORCE", "1") == "1",
+        ) and ok
+    return ok
 
 
 def main():

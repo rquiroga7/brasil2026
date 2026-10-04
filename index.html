@@ -3,23 +3,28 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Proyección Elecciones Brasil 2026</title>
+<title>Elecciones Brasil 2026</title>
 <style>
   :root {
     color-scheme: light dark;
     --lula:#E11B22; --flavio:#002B7F; --otros:#8a8a8a;
-    --bg:#fafafa; --card:#fff; --line:#e3e3e3; --muted:#6b7280;
+    --bg:#fafafa; --card:#fff; --line:#e3e3e3; --muted:#6b7280; --accent:#26418a;
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg:#111417; --card:#1b1f24; --line:#2c333b; --muted:#9aa4b2; }
+    :root { --bg:#111417; --card:#1b1f24; --line:#2c333b; --muted:#9aa4b2; --accent:#7ea0ff; }
   }
-  * { box-sizing: border-box; }
-  body { font-family: system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  * { box-sizing:border-box; }
+  body { font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
          margin:0; padding:1.2rem; max-width:1180px; margin-inline:auto;
          background:var(--bg); color:inherit; }
   h1 { font-size:1.4rem; margin:0 0 .15rem; }
   h2 { font-size:1rem; margin:0 0 .6rem; }
   .sub { color:var(--muted); font-size:.85rem; margin-bottom:1rem; }
+  .tabs { display:flex; gap:.4rem; border-bottom:1px solid var(--line); margin-bottom:1rem; }
+  .tabs button { border:0; background:transparent; padding:.5rem .9rem; cursor:pointer;
+                 color:var(--muted); font-size:.92rem; border-bottom:2px solid transparent; }
+  .tabs button.active { color:var(--accent); border-bottom-color:var(--accent); font-weight:600; }
+  .hidden { display:none !important; }
   .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
           gap:.8rem; margin-bottom:1rem; }
   .card { background:var(--card); border:1px solid var(--line); border-radius:12px;
@@ -30,12 +35,11 @@
   .small { color:var(--muted); font-size:.8rem; }
   .lula { color:var(--lula); } .flavio { color:var(--flavio); } .otros { color:var(--otros); }
   .pill { display:inline-block; font-size:.72rem; padding:.15rem .55rem; border-radius:999px;
-          background:#e8eefc; color:#26418a; }
+          background:#e8eefc; color:var(--accent); }
   .warn { background:#ffe8cc; color:#7a3b00; }
   .panel { background:var(--card); border:1px solid var(--line); border-radius:12px;
            padding:.9rem 1rem; margin-bottom:1rem; }
-  .toolbar { display:flex; flex-wrap:wrap; gap:.6rem; align-items:center;
-             margin-bottom:.6rem; }
+  .toolbar { display:flex; flex-wrap:wrap; gap:.6rem; align-items:center; margin-bottom:.6rem; }
   .seg { display:inline-flex; border:1px solid var(--line); border-radius:999px; overflow:hidden; }
   .seg button { border:0; background:transparent; padding:.35rem .8rem; cursor:pointer;
                 font-size:.82rem; color:inherit; }
@@ -45,7 +49,7 @@
   table { width:100%; border-collapse:collapse; font-size:.85rem; }
   th,td { text-align:left; padding:.4rem .5rem; border-bottom:1px solid var(--line);
           white-space:nowrap; }
-  th { color:var(--muted); font-weight:600; cursor:pointer; user-select:none; }
+  th { color:var(--muted); font-weight:600; }
   td.num,th.num { text-align:right; }
   .bar { display:flex; height:12px; width:130px; border-radius:6px; overflow:hidden;
          background:var(--line); }
@@ -57,87 +61,122 @@
 </style>
 </head>
 <body>
-  <h1>Proyección Elecciones Brasil 2026 — Presidente (1er turno)</h1>
+  <h1>Elecciones Brasil 2026 — Presidente (1er turno)</h1>
   <div class="sub">
-    Datos oficiales TSE (EA20) · proyección por zona ·
-    <span id="actualizado">cargando…</span>
+    Datos oficiales TSE (EA20) · <span id="actualizado">cargando…</span>
     <span class="pill" id="control">–</span>
   </div>
 
-  <div class="toolbar">
-    <div class="seg" id="seg_metodo">
-      <button data-m="swing" class="active">Swing (v2)</button>
-      <button data-m="v1">Estratificado (v1)</button>
-    </div>
-    <span class="small" id="nota_metodo"></span>
+  <div class="tabs">
+    <button data-tab="proj" class="active">Proyección</button>
+    <button data-tab="crudo">Crudo (en vivo)</button>
   </div>
 
-  <div class="grid">
-    <div class="card">
-      <h3>Escrutado</h3>
-      <div class="val" id="escrutado">–</div>
-      <div class="small" id="electores">–</div>
-    </div>
-    <div class="card">
-      <h3 id="h_lula">Proyectado · Lula</h3>
-      <div class="val lula" id="p_lula">–</div>
-      <div class="small" id="p_lula_v">–</div>
-    </div>
-    <div class="card">
-      <h3 id="h_flavio">Proyectado · Flavio</h3>
-      <div class="val flavio" id="p_flavio">–</div>
-      <div class="small" id="p_flavio_v">–</div>
-    </div>
-    <div class="card">
-      <h3>Proyectado · Otros</h3>
-      <div class="val otros" id="p_otros">–</div>
-      <div class="small" id="p_otros_v">–</div>
-    </div>
-  </div>
-
-  <div class="panel">
-    <h2>Proyección nacional <span class="small" id="metodo_nombre"></span></h2>
-    <canvas id="chart_nacional"></canvas>
-  </div>
-
-  <div class="panel">
+  <!-- ================= TAB: PROYECCIÓN ================= -->
+  <section id="tab-proj">
     <div class="toolbar">
-      <h2 style="margin:0">Por estado</h2>
-      <input id="buscar" placeholder="Buscar estado…" style="max-width:180px">
-      <select id="orden">
-        <option value="electores">Ordenar: electores</option>
-        <option value="escrutado">Ordenar: % escrutado</option>
-        <option value="lula">Ordenar: % Lula</option>
-        <option value="flavio">Ordenar: % Flavio</option>
-        <option value="nombre">Ordenar: nombre</option>
-      </select>
+      <div class="seg" id="seg_metodo">
+        <button data-m="swing" class="active">Swing (v2)</button>
+        <button data-m="v1">Estratificado (v1)</button>
+      </div>
+      <span class="small" id="nota_metodo"></span>
     </div>
-    <table id="tabla">
-      <thead>
-        <tr>
-          <th>Estado</th>
-          <th class="num">Escrutado</th>
-          <th>Proyección (Lula / Flavio / Otros)</th>
-          <th class="num">Lula</th>
-          <th class="num">Flavio</th>
-        </tr>
-      </thead>
-      <tbody id="tabla_body"></tbody>
-    </table>
-  </div>
 
-  <div class="panel">
-    <h2>Evolución temporal (v1)</h2>
-    <canvas id="chart_raw"></canvas>
-    <canvas id="chart_ext" style="margin-top:1rem"></canvas>
-  </div>
+    <div class="grid">
+      <div class="card">
+        <h3>Escrutado</h3>
+        <div class="val" id="escrutado">–</div>
+        <div class="small" id="electores">–</div>
+      </div>
+      <div class="card"><h3 id="h_lula">Proyectado · Lula</h3>
+        <div class="val lula" id="p_lula">–</div><div class="small" id="p_lula_v">–</div></div>
+      <div class="card"><h3 id="h_flavio">Proyectado · Flavio</h3>
+        <div class="val flavio" id="p_flavio">–</div><div class="small" id="p_flavio_v">–</div></div>
+      <div class="card"><h3>Proyectado · Otros</h3>
+        <div class="val otros" id="p_otros">–</div><div class="small" id="p_otros_v">–</div></div>
+    </div>
+
+    <div class="panel">
+      <h2>Proyección nacional <span class="small" id="metodo_nombre"></span></h2>
+      <canvas id="chart_nacional"></canvas>
+    </div>
+
+    <div class="panel">
+      <div class="toolbar">
+        <h2 style="margin:0">Por estado (proyectado)</h2>
+        <input id="buscar" placeholder="Buscar estado…" style="max-width:180px">
+        <select id="orden">
+          <option value="electores">Ordenar: electores</option>
+          <option value="escrutado">Ordenar: % escrutado</option>
+          <option value="lula">Ordenar: % Lula</option>
+          <option value="flavio">Ordenar: % Flavio</option>
+          <option value="nombre">Ordenar: nombre</option>
+        </select>
+      </div>
+      <table>
+        <thead><tr>
+          <th>Estado</th><th class="num">Escrutado</th>
+          <th>Proyección (Lula / Flavio / Otros)</th>
+          <th class="num">Lula</th><th class="num">Flavio</th>
+        </tr></thead>
+        <tbody id="tabla_body"></tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h2>Evolución temporal (v1)</h2>
+      <canvas id="chart_raw"></canvas>
+      <canvas id="chart_ext" style="margin-top:1rem"></canvas>
+    </div>
+  </section>
+
+  <!-- ================= TAB: CRUDO ================= -->
+  <section id="tab-crudo" class="hidden">
+    <div class="grid">
+      <div class="card"><h3>Escrutado</h3>
+        <div class="val" id="c_escrutado">–</div>
+        <div class="small" id="c_votos">–</div></div>
+      <div class="card"><h3>Crudo · Lula</h3>
+        <div class="val lula" id="c_lula">–</div><div class="small" id="c_lula_v">–</div></div>
+      <div class="card"><h3>Crudo · Flavio</h3>
+        <div class="val flavio" id="c_flavio">–</div><div class="small" id="c_flavio_v">–</div></div>
+      <div class="card"><h3>Crudo · Otros</h3>
+        <div class="val otros" id="c_otros">–</div><div class="small" id="c_otros_v">–</div></div>
+    </div>
+
+    <div class="panel">
+      <h2>Resultado crudo nacional <span class="small">(votos ya escrutados, % sobre válidos)</span></h2>
+      <canvas id="chart_crudo"></canvas>
+    </div>
+
+    <div class="panel">
+      <div class="toolbar">
+        <h2 style="margin:0">Por estado (crudo)</h2>
+        <input id="buscar_c" placeholder="Buscar estado…" style="max-width:180px">
+        <select id="orden_c">
+          <option value="escrutado">Ordenar: % escrutado</option>
+          <option value="lula">Ordenar: % Lula</option>
+          <option value="flavio">Ordenar: % Flavio</option>
+          <option value="votos">Ordenar: votos</option>
+          <option value="nombre">Ordenar: nombre</option>
+        </select>
+      </div>
+      <table>
+        <thead><tr>
+          <th>Estado</th><th class="num">Escrutado</th>
+          <th>Crudo (Lula / Flavio / Otros)</th>
+          <th class="num">Lula</th><th class="num">Flavio</th>
+        </tr></thead>
+        <tbody id="tabla_crudo_body"></tbody>
+      </table>
+    </div>
+  </section>
 
   <footer>
     Proyección no oficial con fines de análisis.
-    <b>v2 (swing)</b>: share 2022 por zona + swing observado por estado, sobre votos válidos
-    (excluye nulos y blancos), con intervalo p5–p95.
-    <b>v1 (estratificado)</b>: electores habilitados 2026 × % asistencia 2022, proporciones
-    observadas con fallback municipio → estado → nacional (excluye nulos).
+    <b>v2 (swing)</b>: share 2022 por zona + swing observado por estado, sobre válidos (excluye nulos y blancos), intervalo p5–p95.
+    <b>v1 (estratificado)</b>: electores 2026 × % asistencia 2022, fallback municipio → estado → nacional (excluye nulos).
+    <b>Crudo</b>: votos efectivamente escrutados por la TSE (sin proyección).
   </footer>
 
 <script src="config.js"></script>
@@ -145,19 +184,44 @@
 <script>
 const DATOS_URL = (window.DATOS_URL && window.DATOS_URL.trim()) || "datos_web.json";
 const COLORES = { lula: "#E11B22", flavio: "#002B7F", otros: "#8a8a8a" };
-let datos = null;
-let metodo = "swing";
-let chartNacional = null, chartRaw = null, chartExt = null;
-let ordenActual = "electores";
+let datos = null, metodo = "swing", ordenActual = "electores", ordenCrudo = "escrutado";
+let chartNacional = null, chartCrudo = null, chartRaw = null, chartExt = null;
 
 const $ = (id) => document.getElementById(id);
-const fmtPct = (v) => (v == null ? "–" : (v).toFixed(2) + "%");
+const fmtPct = (v) => (v == null ? "–" : Number(v).toFixed(2) + "%");
 const fmtNum = (v) => (v == null ? "–" : Number(v).toLocaleString("es"));
+const etiqueta = (t) => { const p = String(t).split(" "); return p.length > 1 ? p[1] : String(t); };
+const bloqueMetodo = (obj, m) => (obj && obj[m] ? obj[m] : obj);
 
-function etiqueta(t) { const p = String(t).split(" "); return p.length > 1 ? p[1] : String(t); }
+function barra(b) {
+  const l = (b.lula && b.lula.pct) || 0, f = (b.flavio && b.flavio.pct) || 0, o = (b.otros && b.otros.pct) || 0;
+  const t = Math.max(l + f + o, 0.001);
+  return `<div class="bar" title="Lula ${l.toFixed(1)}% · Flavio ${f.toFixed(1)}% · Otros ${o.toFixed(1)}%">
+    <span style="width:${(l/t*100).toFixed(1)}%;background:${COLORES.lula}"></span>
+    <span style="width:${(f/t*100).toFixed(1)}%;background:${COLORES.flavio}"></span>
+    <span style="width:${(o/t*100).toFixed(1)}%;background:${COLORES.otros}"></span>
+  </div>`;
+}
 
-function bloqueMetodo(obj, m) { return obj && obj[m] ? obj[m] : obj; }
+function barChart(canvasId, ref, b) {
+  const data = [b.lula ? b.lula.pct : 0, b.flavio ? b.flavio.pct : 0, b.otros ? b.otros.pct : 0];
+  if (!ref.chart) {
+    ref.chart = new Chart($(canvasId), {
+      type: "bar",
+      data: { labels: ["Lula", "Flavio", "Otros"],
+              datasets: [{ data, backgroundColor: [COLORES.lula, COLORES.flavio, COLORES.otros] }] },
+      options: { indexAxis: "y", animation: false, responsive: true,
+        plugins: { legend: { display: false },
+                   tooltip: { callbacks: { label: (c) => c.parsed.x.toFixed(2) + "%" } } },
+        scales: { x: { suggestedMax: 100, ticks: { callback: (v) => v + "%" } } } },
+    });
+  } else {
+    ref.chart.data.datasets[0].data = data;
+    ref.chart.update();
+  }
+}
 
+// ---------- Proyección ----------
 function pintarNacional() {
   if (!datos) return;
   const nat = datos.nacional || {};
@@ -168,11 +232,9 @@ function pintarNacional() {
   ctrl.textContent = datos.estado_control || "–";
   ctrl.className = "pill" + ((datos.estado_control || "").includes("INCERTEZA") ? " warn" : "");
 
-  const etiquetaM = metodo === "swing" ? "swing (válidos)" : "estratificado v1";
-  $("metodo_nombre").textContent = "· método " + etiquetaM;
+  $("metodo_nombre").textContent = "· método " + (metodo === "swing" ? "swing (válidos)" : "estratificado v1");
   $("h_lula").textContent = "Proyectado · Lula (" + (metodo === "swing" ? "v2" : "v1") + ")";
   $("h_flavio").textContent = "Proyectado · Flavio (" + (metodo === "swing" ? "v2" : "v1") + ")";
-
   $("p_lula").textContent = fmtPct(b.lula && b.lula.pct);
   $("p_flavio").textContent = fmtPct(b.flavio && b.flavio.pct);
   $("p_otros").textContent = fmtPct(b.otros && b.otros.pct);
@@ -181,39 +243,13 @@ function pintarNacional() {
   $("p_flavio_v").textContent = (b.flavio ? fmtNum(b.flavio.votos) + " votos" : "–") +
     (b.flavio && b.flavio.p5 != null ? "  [p5–p95: " + b.flavio.p5.toFixed(1) + "–" + b.flavio.p95.toFixed(1) + "%]" : "");
   $("p_otros_v").textContent = b.otros ? fmtNum(b.otros.votos) + " votos" : "–";
-
-  const labels = ["Lula", "Flavio", "Otros"];
-  const data = [b.lula ? b.lula.pct : 0, b.flavio ? b.flavio.pct : 0, b.otros ? b.otros.pct : 0];
-  if (!chartNacional) {
-    chartNacional = new Chart($("chart_nacional"), {
-      type: "bar",
-      data: { labels, datasets: [{ data, backgroundColor: [COLORES.lula, COLORES.flavio, COLORES.otros] }] },
-      options: { indexAxis: "y", animation: false, responsive: true,
-        plugins: { legend: { display: false },
-                   tooltip: { callbacks: { label: (c) => c.parsed.x.toFixed(2) + "%" } } },
-        scales: { x: { suggestedMax: 100, ticks: { callback: (v) => v + "%" } } } },
-    });
-  } else {
-    chartNacional.data.datasets[0].data = data;
-    chartNacional.update();
-  }
-}
-
-function filaBarra(b) {
-  const l = b.lula ? b.lula.pct : 0, f = b.flavio ? b.flavio.pct : 0, o = b.otros ? b.otros.pct : 0;
-  const t = Math.max(l + f + o, 0.001);
-  return `<div class="bar" title="Lula ${l.toFixed(1)}% · Flavio ${f.toFixed(1)}% · Otros ${o.toFixed(1)}%">
-    <span style="width:${(l/t*100).toFixed(1)}%;background:${COLORES.lula}"></span>
-    <span style="width:${(f/t*100).toFixed(1)}%;background:${COLORES.flavio}"></span>
-    <span style="width:${(o/t*100).toFixed(1)}%;background:${COLORES.otros}"></span>
-  </div>`;
+  barChart("chart_nacional", window, b);
 }
 
 function pintarTabla() {
   if (!datos) return;
   const q = ($("buscar").value || "").toLowerCase();
-  let filas = (datos.estados || []).filter((e) =>
-    (e.nombre + " " + e.uf).toLowerCase().includes(q));
+  let filas = (datos.estados || []).filter((e) => (e.nombre + " " + e.uf).toLowerCase().includes(q));
   const val = (e) => {
     const b = bloqueMetodo(e, metodo) || {};
     if (ordenActual === "lula") return b.lula ? b.lula.pct : 0;
@@ -224,20 +260,63 @@ function pintarTabla() {
   };
   if (ordenActual === "nombre") filas.sort((a, b) => a.nombre.localeCompare(b.nombre));
   else filas.sort((a, b) => val(b) - val(a));
-
   $("tabla_body").innerHTML = filas.map((e) => {
     const b = bloqueMetodo(e, metodo) || {};
-    const l = b.lula ? b.lula.pct : 0, f = b.flavio ? b.flavio.pct : 0;
     return `<tr>
       <td><b>${e.nombre}</b> <span class="barlbl">${e.uf}</span></td>
       <td class="num">${fmtPct(e.escrutado)}</td>
-      <td>${filaBarra(b)}</td>
-      <td class="num lula">${fmtPct(l)}</td>
-      <td class="num flavio">${fmtPct(f)}</td>
+      <td>${barra(b)}</td>
+      <td class="num lula">${fmtPct(b.lula && b.lula.pct)}</td>
+      <td class="num flavio">${fmtPct(b.flavio && b.flavio.pct)}</td>
     </tr>`;
   }).join("");
 }
 
+// ---------- Crudo ----------
+function pintarCrudo() {
+  if (!datos) return;
+  const c = (datos.nacional && datos.nacional.crudo) || datos.crudo || {};
+  $("c_escrutado").textContent = fmtPct(datos.escrutado_pct);
+  $("c_votos").textContent = c.validos != null
+    ? fmtNum(c.validos) + " válidos · " + fmtNum(c.blancos) + " blancos · " + fmtNum(c.nulos) + " nulos"
+    : "–";
+  $("c_lula").textContent = fmtPct(c.lula && c.lula.pct);
+  $("c_flavio").textContent = fmtPct(c.flavio && c.flavio.pct);
+  $("c_otros").textContent = fmtPct(c.otros && c.otros.pct);
+  $("c_lula_v").textContent = c.lula ? fmtNum(c.lula.votos) + " votos" : "–";
+  $("c_flavio_v").textContent = c.flavio ? fmtNum(c.flavio.votos) + " votos" : "–";
+  $("c_otros_v").textContent = c.otros ? fmtNum(c.otros.votos) + " votos" : "–";
+  barChart("chart_crudo", window, c);
+}
+
+function pintarTablaCrudo() {
+  if (!datos) return;
+  const q = ($("buscar_c").value || "").toLowerCase();
+  let filas = (datos.estados || []).filter((e) => (e.nombre + " " + e.uf).toLowerCase().includes(q));
+  const val = (e) => {
+    const c = e.crudo || {};
+    if (ordenCrudo === "lula") return c.lula ? c.lula.pct : 0;
+    if (ordenCrudo === "flavio") return c.flavio ? c.flavio.pct : 0;
+    if (ordenCrudo === "votos") return c.validos || 0;
+    if (ordenCrudo === "nombre") return 0;
+    return e.escrutado || 0;
+  };
+  if (ordenCrudo === "nombre") filas.sort((a, b) => a.nombre.localeCompare(b.nombre));
+  else filas.sort((a, b) => val(b) - val(a));
+  $("tabla_crudo_body").innerHTML = filas.map((e) => {
+    const c = e.crudo || {};
+    const votos = c.validos ? `<span class="barlbl">(${fmtNum(c.validos)})</span>` : "";
+    return `<tr>
+      <td><b>${e.nombre}</b> <span class="barlbl">${e.uf}</span></td>
+      <td class="num">${fmtPct(e.escrutado)}</td>
+      <td>${barra(c)}</td>
+      <td class="num lula">${fmtPct(c.lula && c.lula.pct)}</td>
+      <td class="num flavio">${fmtPct(c.flavio && c.flavio.pct)}</td>
+    </tr>`;
+  }).join("");
+}
+
+// ---------- Series ----------
 function construirDatasets(serie, clave) {
   return ["lula", "flavio", "otros"].map((k) => ({
     label: k === "otros" ? "Otros+Blancos" : k[0].toUpperCase() + k.slice(1),
@@ -246,24 +325,21 @@ function construirDatasets(serie, clave) {
     borderWidth: 2, pointRadius: 0, tension: 0.15, spanGaps: true,
   }));
 }
-function opcionesLinea() {
-  return { responsive: true, animation: false,
-    interaction: { mode: "index", intersect: false },
-    scales: { y: { suggestedMin: 0, suggestedMax: 100, ticks: { callback: (v) => v + "%" } },
-              x: { ticks: { maxTicksLimit: 8, maxRotation: 30 } } },
-    plugins: { legend: { position: "bottom" } } };
-}
+const opcionesLinea = () => ({ responsive: true, animation: false,
+  interaction: { mode: "index", intersect: false },
+  scales: { y: { suggestedMin: 0, suggestedMax: 100, ticks: { callback: (v) => v + "%" } },
+            x: { ticks: { maxTicksLimit: 8, maxRotation: 30 } } },
+  plugins: { legend: { position: "bottom" } } });
 function pintarSeries() {
   const serie = (datos && datos.serie) || [];
-  if (!chartRaw) chartRaw = new Chart($("chart_raw"),
-    { type: "line", data: { labels: [], datasets: construirDatasets([], "crudo") }, options: opcionesLinea() });
-  if (!chartExt) chartExt = new Chart($("chart_ext"),
-    { type: "line", data: { labels: [], datasets: construirDatasets([], "proyectado") }, options: opcionesLinea() });
+  if (!chartRaw) chartRaw = new Chart($("chart_raw"), { type: "line", data: { labels: [], datasets: construirDatasets([], "crudo") }, options: opcionesLinea() });
+  if (!chartExt) chartExt = new Chart($("chart_ext"), { type: "line", data: { labels: [], datasets: construirDatasets([], "proyectado") }, options: opcionesLinea() });
   const labels = serie.map((s) => etiqueta(s.t));
   chartRaw.data.labels = labels; chartRaw.data.datasets = construirDatasets(serie, "crudo"); chartRaw.update();
   chartExt.data.labels = labels; chartExt.data.datasets = construirDatasets(serie, "proyectado"); chartExt.update();
 }
 
+// ---------- Orquestación ----------
 async function refrescar() {
   try {
     const sep = DATOS_URL.includes("?") ? "&" : "?";
@@ -275,21 +351,27 @@ async function refrescar() {
       ? "swing activo (2022 disponible)"
       : "swing no disponible: falta escrutinio_zonas_2022.csv (se muestra v1)";
     if (!datos.swing_disponible) { metodo = "v1"; marcarSegmento(); }
-    pintarNacional(); pintarTabla(); pintarSeries();
+    pintarNacional(); pintarTabla(); pintarCrudo(); pintarTablaCrudo(); pintarSeries();
   } catch (e) {
     $("actualizado").textContent = "sin datos todavía (" + e.message + ")";
   }
 }
 
 function marcarSegmento() {
-  document.querySelectorAll("#seg_metodo button").forEach((b) =>
-    b.classList.toggle("active", b.dataset.m === metodo));
+  document.querySelectorAll("#seg_metodo button").forEach((b) => b.classList.toggle("active", b.dataset.m === metodo));
 }
-
 document.querySelectorAll("#seg_metodo button").forEach((b) =>
   b.addEventListener("click", () => { metodo = b.dataset.m; marcarSegmento(); pintarNacional(); pintarTabla(); }));
+document.querySelectorAll(".tabs button").forEach((b) =>
+  b.addEventListener("click", () => {
+    document.querySelectorAll(".tabs button").forEach((x) => x.classList.toggle("active", x === b));
+    $("tab-proj").classList.toggle("hidden", b.dataset.tab !== "proj");
+    $("tab-crudo").classList.toggle("hidden", b.dataset.tab !== "crudo");
+  }));
 $("orden").addEventListener("change", (e) => { ordenActual = e.target.value; pintarTabla(); });
+$("orden_c").addEventListener("change", (e) => { ordenCrudo = e.target.value; pintarTablaCrudo(); });
 $("buscar").addEventListener("input", pintarTabla);
+$("buscar_c").addEventListener("input", pintarTablaCrudo);
 
 refrescar();
 setInterval(refrescar, 60000);

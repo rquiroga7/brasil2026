@@ -360,6 +360,7 @@ def realizar_barrido(session, municipios, estado, args, n_pasada, deadline=None)
                 procesados += 1
 
         escribir_filas(filas)
+        guardar_estado(estado)   # resumible: guarda el estado tras cada UF
         print(f" -> {uf.upper()}: {procesados} municipios actualizados.        ")
 
     print(f"[OK] Ciclo N° {n_pasada} terminado. Zonas nuevas escritas: {zonas_nuevas}")

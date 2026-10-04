@@ -1,6 +1,5 @@
 // Configuración del dashboard.
-// Pon aquí la URL de tu endpoint sin caché (Cloudflare Worker, Vercel, VPS...).
-// Si se deja vacío, el dashboard usará el archivo local "datos_web.json".
-window.DATOS_URL = "";
-// Ejemplo:
-// window.DATOS_URL = "https://escrutinio-2026.TU-SUBDOMINIO.workers.dev/datos";
+//
+// El publicador local sube "datos_web.json" a la rama `data` del repositorio.
+// El dashboard lo lee desde raw.githubusercontent.com con cache-busting.
+window.DATOS_URL = "https://raw.githubusercontent.com/rquiroga7/brasil2026/data/datos_web.json";

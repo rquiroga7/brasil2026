@@ -9,6 +9,8 @@ sin caché.
 Variables de entorno:
   SCRAPE_SECONDS     segundos máximos por pasada de raspado (por defecto 45)
   PUBLISH_INTERVAL   segundos entre publicaciones (por defecto 60)
+  PUBLISH_MODE       "git" para commit+push de datos_web.json cada ciclo
+                     (o PUBLISH_URL/PUBLISH_TOKEN para un endpoint HTTP)
 
 Uso:
   python runner_local.py
@@ -33,7 +35,8 @@ def correr(*args):
 def main():
     print(f"[*] Runner local | raspado <= {SCRAPE_SECONDS}s | "
           f"publicación cada {PUBLISH_INTERVAL}s")
-    print("[i] Asegúrate de tener PUBLISH_URL (y PUBLISH_TOKEN) configurados.")
+    print("[i] Para publicar en GitHub: define PUBLISH_MODE=git (y configura el remoto).")
+    print("[i] Alternativa HTTP: define PUBLISH_URL (y PUBLISH_TOKEN).")
     try:
         while True:
             inicio = time.time()

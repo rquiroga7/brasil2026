@@ -201,6 +201,18 @@ def proyectar():
     fb_val = calcular_fallbacks_valid(df_vivo)           # v2: excluye nulos+blancos
     live = construir_live(df_vivo)
 
+    # Escrutado CRUDO (sin proyectar), agregado por UF y nacional.
+    crudo_uf = {}
+    for lv in live.values():
+        uf = lv["uf"]
+        if not uf:
+            continue
+        d = crudo_uf.setdefault(uf, {"l": 0.0, "f": 0.0, "o": 0.0, "valid": 0.0,
+                                     "total": 0.0, "blancos": 0.0, "nulos": 0.0})
+        d["l"] += lv["l"]; d["f"] += lv["f"]; d["o"] += lv["o"]
+        d["valid"] += lv["valid"]; d["total"] += lv["total"]
+        d["blancos"] += lv["blancos"]; d["nulos"] += lv["nulos"]
+
     swings, errores, nat_swing, nat_se = ({}, {}, np.zeros(3), np.zeros(3))
     if swing_disponible:
         swings, errores, nat_swing, nat_se = calcular_swings(live, dict22)
@@ -347,6 +359,16 @@ def proyectar():
             d["flavio"]["p95"] = pct(if_[1], total)
         return d
 
+    def bloque_crudo(d):
+        """Escrutado real (sin proyectar), porcentajes sobre votos válidos."""
+        return {
+            "lula": {"votos": int(d["l"]), "pct": pct(d["l"], d["valid"])},
+            "flavio": {"votos": int(d["f"]), "pct": pct(d["f"], d["valid"])},
+            "otros": {"votos": int(d["o"]), "pct": pct(d["o"], d["valid"])},
+            "validos": int(d["valid"]), "total": int(d["total"]),
+            "blancos": int(d["blancos"]), "nulos": int(d["nulos"]),
+        }
+
     # Nacional
     nat_total = float(valid_uf.sum())
     nat_v1 = bloque(v1_l.sum(), v1_f.sum(), v1_o.sum(), nat_total)
@@ -356,6 +378,13 @@ def proyectar():
     else:
         nat_sw = nat_v1
     escrutado_nat = pct(float(live_total.sum()), nat_total)
+
+    crudo_nat = {"l": 0.0, "f": 0.0, "o": 0.0, "valid": 0.0,
+                 "total": 0.0, "blancos": 0.0, "nulos": 0.0}
+    for d in crudo_uf.values():
+        for k in crudo_nat:
+            crudo_nat[k] += d[k]
+    crudo_nacional = bloque_crudo(crudo_nat)
 
     # Por estado
     estados = []
@@ -368,6 +397,9 @@ def proyectar():
             "escrutado": esc,
             "electores": int(A[state_idx == i].sum()),
             "validos_proyectados": int(total),
+            "crudo": bloque_crudo(crudo_uf.get(uf, {
+                "l": 0.0, "f": 0.0, "o": 0.0, "valid": 0.0,
+                "total": 0.0, "blancos": 0.0, "nulos": 0.0})),
             "v1": bloque(v1_l[i], v1_f[i], v1_o[i], total),
         }
         if swing_disponible:
@@ -383,7 +415,8 @@ def proyectar():
         "swing_disponible": swing_disponible,
         "metodo_principal": "swing" if swing_disponible else "v1",
         "escrutado_pct": escrutado_nat,
-        "nacional": {"escrutado": escrutado_nat, "v1": nat_v1, "swing": nat_sw},
+        "nacional": {"escrutado": escrutado_nat, "crudo": crudo_nacional,
+                     "v1": nat_v1, "swing": nat_sw},
         "estados": estados,
     }
 

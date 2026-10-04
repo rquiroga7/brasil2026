@@ -6,9 +6,25 @@ __pycache__/
 dados_tse_2022/
 *.part
 
-# Paquete web generado localmente (se publica al endpoint sin caché)
-datos_web.json
+# === DATOS GENERADOS (no se versionan) ===
+# Escrutinio 2026 en vivo
+escrutinio_zonas_2026.csv
+serie_temporal_2026.csv
+control_versiones_2026.json
+padron_2026.csv
 
-# Nota: los datos de resultados SÍ se pueden versionar si se desea:
-#   escrutinio_zonas_2026.csv, serie_temporal_2026.csv, padron_2026.csv,
-#   historico_proyecciones_2026.csv, datos_proyeccion_2026.json
+# Intermedios de 2022 generados por scrapingbrasil2022.py
+escrutinio_zonas_2022.csv
+candidatos_2022.csv
+historico_nacional_2022_*.csv
+
+# Proyecciones y salidas web
+historico_proyecciones_2026.csv
+datos_proyeccion_2026.json
+datos_proyeccion_swing_2026.json
+datos_web.json
+grafico_vivo_2026.png
+
+# Entrada requerida (SÍ se versiona): padron_y_asistencia_2022.csv
+# Es el padrón/asistencia 2022 por zona que usan las proyecciones y no se puede
+# regenerar desde estos scripts. Si prefieres no versionarlo, añádelo aquí.
