@@ -1,10 +1,15 @@
 import csv
 import os
+import sys
 import time
 from datetime import datetime
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+
+if hasattr(sys.stdout, "reconfigure"):
+  sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+  sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 # === CONFIGURACIÓN OFICIAL TSE 2026 ===
 ARCHIVO_CSV = "escrutinio_zonas_2026.csv"
@@ -13,35 +18,11 @@ DOMINIO_BASE = "https://resultados.tse.jus.br"
 ANO_ELECCION = "ele2026"
 CODIGO_ELEICAO = "6257"
 CODIGO_ELEICAO_6D = "006257"
+CARGO = "0001"
 
 ESTADOS = [
-    "ac",
-    "al",
-    "am",
-    "ap",
-    "ba",
-    "ce",
-    "df",
-    "es",
-    "go",
-    "ma",
-    "mg",
-    "ms",
-    "mt",
-    "pa",
-    "pb",
-    "pe",
-    "pi",
-    "pr",
-    "rj",
-    "rn",
-    "ro",
-    "rr",
-    "rs",
-    "sc",
-    "se",
-    "sp",
-    "to",
+    "ac", "al", "am", "ap", "ba", "ce", "df", "es", "go", "ma", "mg", "ms", "mt",
+    "pa", "pb", "pe", "pi", "pr", "rj", "rn", "ro", "rr", "rs", "sc", "se", "sp", "to",
 ]
 
 CANDIDATOS = {
@@ -111,111 +92,118 @@ if not os.path.exists(ARCHIVO_CSV):
   with open(ARCHIVO_CSV, mode="w", newline="", encoding="utf-8") as f:
     writer = csv.writer(f)
     writer.writerow([
-        "hora_local",
-        "hora_tse",
-        "codigo_municipio",
-        "zona_electoral",
-        "electores_totales",
-        "votos_totales",
-        "Lula",
-        "Flavio_Bolsonaro",
-        "Augusto_Cury",
-        "Ronaldo_Caiado",
-        "Romeu_Zema",
-        "Renan_Santos",
-        "Hertz_Dias",
-        "Edmilson_Costa",
-        "Clariana_Barao",
-        "Avalanche_Marçal",
-        "Rui_Costa_Pimenta",
-        "Wilson_Grassi",
-        "Samara_Martins",
-        "votos_blancos",
-        "votos_nulos",
-        "estado_uf",
-        "numero_pasada",
+        "hora_local", "hora_tse", "codigo_municipio", "zona_electoral",
+        "electores_totales", "votos_totales",
+        "Lula", "Flavio_Bolsonaro", "Augusto_Cury", "Ronaldo_Caiado",
+        "Romeu_Zema", "Renan_Santos", "Hertz_Dias", "Edmilson_Costa",
+        "Clariana_Barao", "Avalanche_Marçal", "Rui_Costa_Pimenta",
+        "Wilson_Grassi", "Samara_Martins", "votos_blancos", "votos_nulos",
+        "estado_uf", "numero_pasada",
     ])
 
 control_versiones = {}
+municipios_por_uf = {}
 
 
-def procesar_municipio_por_zonas(session, uf, cod_mun_raw, hora_tse, n_pasada):
-  # Formateo estricto del código de municipio a 5 dígitos (ejemplo: '01007')
-  cod_mun = str(cod_mun_raw).zfill(5)
-
-  url_mun = f"{DOMINIO_BASE}/oficial/{ANO_ELECCION}/{CODIGO_ELEICAO}/dados/{uf.lower()}/{uf.lower()}-m{cod_mun}-c0001-e{CODIGO_ELEICAO_6D}-v.json"
+def cargar_municipios(session):
+  """Municipios y zonas desde config/mun-e<cod6>-cm.json (reemplaza al -i.json)."""
+  url = (f"{DOMINIO_BASE}/oficial/{ANO_ELECCION}/{CODIGO_ELEICAO}"
+         f"/config/mun-e{CODIGO_ELEICAO_6D}-cm.json")
   registrar_peticion_y_controlar_trafico()
+  res = session.get(url, headers=HEADERS, timeout=15)
+  res.raise_for_status()
+  data = res.json()
+  mapa = {}
+  for uf_entry in data.get("abr", []):
+    uf = str(uf_entry.get("cd", "")).lower()
+    if uf not in ESTADOS:
+      continue
+    mapa[uf] = [
+        (str(mu.get("cd")), mu.get("nm"), [str(z) for z in (mu.get("z") or [])])
+        for mu in uf_entry.get("mu", [])
+    ]
+  return mapa
 
+
+def versiones_estado(session, uf):
+  """{codigo_municipio: version} desde el avance -ab.json (reemplaza al -i.json)."""
+  url = (f"{DOMINIO_BASE}/oficial/{ANO_ELECCION}/{CODIGO_ELEICAO}"
+         f"/dados/{uf}/{uf}-e{CODIGO_ELEICAO_6D}-ab.json")
+  registrar_peticion_y_controlar_trafico()
   try:
-    res = session.get(url_mun, headers=HEADERS, timeout=6)
+    res = session.get(url, headers=HEADERS, timeout=10)
     if res.status_code != 200:
-      return False
-
+      return {}
     data = res.json()
-    zonas_internas = data.get("zns", [])
-    if not zonas_internas:
-      return False
-
-    filas_a_escribir = []
-    hora_local = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    for zona_data in zonas_internas:
-      num_zona = str(zona_data.get("cd", "")).lstrip("0")
-      if not num_zona:
-        num_zona = "0"
-
-      electores_zona = str(zona_data.get("e", "0"))
-      votos_totales_zona = str(zona_data.get("t", "0"))
-      votos_blancos_zona = str(zona_data.get("vb", "0"))
-      votos_nulos_zona = str(zona_data.get("vn", "0"))
-
-      conteo_cand_zona = {nombre_col: "0" for nombre_col in CANDIDATOS.values()}
-
-      # Mapeo de candidatos
-      for c in zona_data.get("cand", []):
-        nombre_tse = str(c.get("nm", "")).lower()
-        votos_candidato = str(c.get("vap", "0"))
-
-        for clave_busqueda, nombre_columna in CANDIDATOS.items():
-          if clave_busqueda in nombre_tse:
-            conteo_cand_zona[nombre_columna] = votos_candidato
-
-      fila = [
-          hora_local,
-          hora_tse,
-          cod_mun,
-          num_zona,
-          electores_zona,
-          votos_totales_zona,
-          conteo_cand_zona["Lula"],
-          conteo_cand_zona["Flavio_Bolsonaro"],
-          conteo_cand_zona["Augusto_Cury"],
-          conteo_cand_zona["Ronaldo_Caiado"],
-          conteo_cand_zona["Romeu_Zema"],
-          conteo_cand_zona["Renan_Santos"],
-          conteo_cand_zona["Hertz_Dias"],
-          conteo_cand_zona["Edmilson_Costa"],
-          conteo_cand_zona["Clariana_Barao"],
-          conteo_cand_zona["Avalanche_Marçal"],
-          conteo_cand_zona["Rui_Costa_Pimenta"],
-          conteo_cand_zona["Wilson_Grassi"],
-          conteo_cand_zona["Samara_Martins"],
-          votos_blancos_zona,
-          votos_nulos_zona,
-          uf.upper(),
-          n_pasada,
-      ]
-      filas_a_escribir.append(fila)
-
-    if filas_a_escribir:
-      with open(ARCHIVO_CSV, mode="a", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        writer.writerows(filas_a_escribir)
-      return True
-    return False
-
   except Exception:
-    return False
+    return {}
+  dg, hg = data.get("dg", ""), data.get("hg", "")
+  versiones = {}
+  for ab in data.get("abr", []):
+    cd = str(ab.get("cdabr", ""))
+    est = str(ab.get("e", {}).get("est", ""))
+    versiones[cd] = f"{ab.get('dt') or dg}|{ab.get('ht') or hg}|{est}"
+  return versiones
+
+
+def procesar_municipio_por_zonas(session, uf, cod_mun, zonas, hora_tse, n_pasada):
+  uf = uf.lower()
+  filas_a_escribir = []
+  hora_local = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+  for zona in zonas:
+    # Ruta vigente EA20 por zona: sin "-m" y con sufijo "-u.json".
+    url_zona = (f"{DOMINIO_BASE}/oficial/{ANO_ELECCION}/{CODIGO_ELEICAO}"
+                f"/dados/{uf}/{uf}{cod_mun}-z{zona}-c{CARGO}-e{CODIGO_ELEICAO_6D}-u.json")
+    registrar_peticion_y_controlar_trafico()
+    try:
+      res = session.get(url_zona, headers=HEADERS, timeout=6)
+      if res.status_code != 200:
+        continue
+      data = res.json()
+    except Exception:
+      continue
+
+    e = data.get("e", {})
+    v = data.get("v", {})
+    electores_zona = str(e.get("te", "0"))
+    votos_totales_zona = str(v.get("tv", "0"))
+    votos_blancos_zona = str(v.get("vb", "0"))
+    votos_nulos_zona = str(v.get("vn", "0"))
+
+    num_zona = str(zona).lstrip("0")
+    if not num_zona:
+      num_zona = "0"
+
+    # Candidatos en carg[].agr[].par[].cand[]; nombre de urna en "nmu".
+    conteo_cand_zona = {nombre_col: "0" for nombre_col in CANDIDATOS.values()}
+    for cargo in data.get("carg", []):
+      for agr in cargo.get("agr", []):
+        for par in agr.get("par", []):
+          for c in par.get("cand", []):
+            nombre_tse = str(c.get("nmu") or c.get("nm") or "").lower()
+            votos_candidato = str(c.get("vap", "0"))
+            for clave_busqueda, nombre_columna in CANDIDATOS.items():
+              if clave_busqueda in nombre_tse:
+                conteo_cand_zona[nombre_columna] = votos_candidato
+
+    fila = [
+        hora_local, hora_tse, cod_mun, num_zona, electores_zona, votos_totales_zona,
+        conteo_cand_zona["Lula"], conteo_cand_zona["Flavio_Bolsonaro"], conteo_cand_zona["Augusto_Cury"],
+        conteo_cand_zona["Ronaldo_Caiado"], conteo_cand_zona["Romeu_Zema"], conteo_cand_zona["Renan_Santos"],
+        conteo_cand_zona["Hertz_Dias"], conteo_cand_zona["Edmilson_Costa"], conteo_cand_zona["Clariana_Barao"],
+        conteo_cand_zona["Avalanche_Marçal"], conteo_cand_zona["Rui_Costa_Pimenta"],
+        conteo_cand_zona["Wilson_Grassi"], conteo_cand_zona["Samara_Martins"],
+        votos_blancos_zona, votos_nulos_zona, uf.upper(), n_pasada,
+    ]
+    filas_a_escribir.append(fila)
+
+  if filas_a_escribir:
+    with open(ARCHIVO_CSV, mode="a", newline="", encoding="utf-8") as f:
+      writer = csv.writer(f)
+      writer.writerows(filas_a_escribir)
+    return True
+  return False
 
 
 def realizar_barrido_inteligente(session, n_pasada):
@@ -227,43 +215,32 @@ def realizar_barrido_inteligente(session, n_pasada):
 
   for uf in ESTADOS:
     print(f" -> Escaneando índice del estado: {uf.upper()}...", end="\r")
-    registrar_peticion_y_controlar_trafico()
-
-    url_estado = f"{DOMINIO_BASE}/oficial/{ANO_ELECCION}/{CODIGO_ELEICAO}/dados/{uf.lower()}/{uf.lower()}-e{CODIGO_ELEICAO_6D}-i.json"
-    try:
-      response = session.get(url_estado, headers=HEADERS, timeout=6)
-      if response.status_code != 200:
+    versiones = versiones_estado(session, uf)
+    for cod_mun, _nombre, zonas in municipios_por_uf.get(uf, []):
+      version = versiones.get(cod_mun)
+      if version is None or not zonas:
         continue
-
-      data_estado = response.json()
-      for mu in data_estado.get("muns", []):
-        cod_mun = mu.get("cd")
-        hora_tse = f"{mu.get('dg', '')} {mu.get('hg', '')}".strip()
-
-        if control_versiones.get(cod_mun) != hora_tse:
-          exito = procesar_municipio_por_zonas(
-              session, uf, cod_mun, hora_tse, n_pasada
-          )
-          if exito:
-            control_versiones[cod_mun] = hora_tse
-            municipios_modificados += 1
-    except Exception:
-      pass
+      if control_versiones.get(cod_mun) == version:
+        continue
+      exito = procesar_municipio_por_zonas(session, uf, cod_mun, zonas, version, n_pasada)
+      if exito:
+        control_versiones[cod_mun] = version
+        municipios_modificados += 1
 
   print(
-      f"\n[✓] Pasada N° {n_pasada} terminada. Municipios con zonas actualizadas:"
+      f"\n[OK] Pasada N° {n_pasada} terminada. Municipios con zonas actualizadas:"
       f" {municipios_modificados}"
   )
 
 
 if __name__ == "__main__":
-  print(
-      "[*] Iniciando raspador por Zonas con conexión optimizada al CDN del TSE."
-  )
+  print("[*] Iniciando raspador por Zonas con conexión optimizada al CDN del TSE.")
 
   contador_pasadas_global = 1
 
   with crear_session_resistente() as s:
+    municipios_por_uf = cargar_municipios(s)
+    print(f"[*] Municipios cargados: {sum(len(v) for v in municipios_por_uf.values())}")
     while True:
       realizar_barrido_inteligente(s, contador_pasadas_global)
       print("Esperando 45 segundos para el próximo barrido...")
