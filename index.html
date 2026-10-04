@@ -124,9 +124,13 @@
     </div>
 
     <div class="panel">
-      <h2>Evolución temporal (v1)</h2>
+      <h2>Evolución temporal</h2>
+      <h3 style="font-size:.85rem;color:var(--muted);margin:.2rem 0 .3rem">Datos Crudos</h3>
       <canvas id="chart_raw"></canvas>
-      <canvas id="chart_ext" style="margin-top:1rem"></canvas>
+      <h3 style="font-size:.85rem;color:var(--muted);margin:.8rem 0 .3rem">Método V1</h3>
+      <canvas id="chart_ext"></canvas>
+      <h3 style="font-size:.85rem;color:var(--muted);margin:.8rem 0 .3rem">Método Swing (v2)</h3>
+      <canvas id="chart_swing"></canvas>
     </div>
   </section>
 
@@ -185,7 +189,7 @@
 const DATOS_URL = (window.DATOS_URL && window.DATOS_URL.trim()) || "datos_web.json";
 const COLORES = { lula: "#E11B22", flavio: "#4C8DFF", otros: "#8a8a8a" };
 let datos = null, metodo = "swing", ordenActual = "electores", ordenCrudo = "escrutado";
-let chartRaw = null, chartExt = null;
+let chartRaw = null, chartExt = null, chartSwing = null;
 
 const $ = (id) => document.getElementById(id);
 const fmtPct = (v) => (v == null ? "–" : Number(v).toFixed(2) + "%");
@@ -333,16 +337,21 @@ function construirDatasets(serie, clave) {
 }
 const opcionesLinea = () => ({ responsive: true, animation: false,
   interaction: { mode: "index", intersect: false },
-  scales: { y: { suggestedMin: 0, suggestedMax: 100, ticks: { callback: (v) => v + "%" } },
-            x: { ticks: { maxTicksLimit: 8, maxRotation: 30 } } },
+  scales: {
+    y: { min: 0, max: 65,
+         afterBuildTicks: (axis) => { axis.ticks = [0, 25, 50, 65].map((v) => ({ value: v })); },
+         ticks: { callback: (v) => v + "%" } },
+    x: { ticks: { maxTicksLimit: 8, maxRotation: 30 } } },
   plugins: { legend: { position: "bottom" } } });
 function pintarSeries() {
   const serie = (datos && datos.serie) || [];
   if (!chartRaw) chartRaw = new Chart($("chart_raw"), { type: "line", data: { labels: [], datasets: construirDatasets([], "crudo") }, options: opcionesLinea() });
   if (!chartExt) chartExt = new Chart($("chart_ext"), { type: "line", data: { labels: [], datasets: construirDatasets([], "proyectado") }, options: opcionesLinea() });
+  if (!chartSwing) chartSwing = new Chart($("chart_swing"), { type: "line", data: { labels: [], datasets: construirDatasets([], "swing") }, options: opcionesLinea() });
   const labels = serie.map((s) => etiqueta(s.t));
   chartRaw.data.labels = labels; chartRaw.data.datasets = construirDatasets(serie, "crudo"); chartRaw.update();
   chartExt.data.labels = labels; chartExt.data.datasets = construirDatasets(serie, "proyectado"); chartExt.update();
+  chartSwing.data.labels = labels; chartSwing.data.datasets = construirDatasets(serie, "swing"); chartSwing.update();
 }
 
 // ---------- Orquestación ----------

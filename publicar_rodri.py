@@ -65,6 +65,8 @@ def construir_serie():
             }
             if fila.get("tipo") == "crudo":
                 entrada["crudo"] = punto
+            elif fila.get("tipo") == "swing":
+                entrada["swing"] = punto
             else:
                 entrada["proyectado"] = punto
     return list(serie.values())
