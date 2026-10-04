@@ -537,8 +537,20 @@ def graficar_simulacion_swing():
                f"(última: {x.iloc[-1]:.2f}% contado)", fontsize=11, fontweight="bold")
   ax.grid(True, linestyle="--", alpha=0.5)
 
-  # Leyenda 1 (arriba-izquierda): series contadas
-  leg1 = ax.legend(loc="upper left", fontsize=9, framealpha=0.85)
+  # Leyenda 1 (arriba-izquierda): series contadas + total contado
+  lastc = crudo.iloc[-1]
+
+  def _v(col):
+    val = lastc.get(col)
+    try:
+      return 0.0 if pd.isna(val) else float(val)
+    except (TypeError, ValueError):
+      return 0.0
+
+  votos_contados = int(_v("lula_votos") + _v("bolsonaro_votos") + _v("otros_blancos_votos"))
+  leg1 = ax.legend(loc="upper left", fontsize=9, framealpha=0.85,
+                   title=f"Contados: {votos_contados:,}".replace(",", ".") + " votos",
+                   title_fontsize=9)
   ax.add_artist(leg1)
 
   # Leyenda 2 (arriba-derecha): resultados proyectados a 100%
