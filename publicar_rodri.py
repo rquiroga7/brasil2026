@@ -141,7 +141,16 @@ def publicar_http(payload, url):
 # Publicación por Git (GitHub-only)
 # --------------------------------------------------------------------------
 def _git(*args, input=None):
-    return subprocess.run(["git", *args], input=input, capture_output=True, text=True)
+    # Se pasan bytes (sin text=True) para que Windows NO traduzca '\n' a '\r\n':
+    # eso corrompía el nombre del archivo en 'git mktree' (quedaba "datos_web.json\r").
+    if isinstance(input, str):
+        input = input.encode("utf-8")
+    r = subprocess.run(["git", *args], input=input, capture_output=True)
+    return subprocess.CompletedProcess(
+        r.args, r.returncode,
+        r.stdout.decode("utf-8", "replace"),
+        r.stderr.decode("utf-8", "replace"),
+    )
 
 
 def publicar_git(archivo, branch="data", remote="origin", force=True):
