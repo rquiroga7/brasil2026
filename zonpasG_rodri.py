@@ -2,28 +2,15 @@
 """
 zonpasG_rodri.py — Raspador consolidado del escrutinio TSE 2026 (por ZONA).
 
-Fusiona:
-  * scrapingbrasil2026d_rodri.py  -> API vigente correcta, IDs por número TSE,
-                                     reintentos, limitador de tráfico, estado de
-                                     versiones y serie temporal.
-  * scrapingbrasil2026zonpasG.py  -> columnas de estado y número de pasada,
-                                     inclusión del voto exterior.
-
-Fuente oficial: https://resultados.tse.jus.br   (documentación EA10..EA20 del TSE)
-
-Rutas vigentes (verificadas contra el front-end oficial; ojo: NO llevan "-m"):
-
+Rutas vigentes (EA20), verificadas contra el front-end oficial:
   config/mun-e<cod6>-cm.json
   dados/<uf>/<uf>-e<cod6>-ab.json
-  dados/<uf>/<uf><mun5>-c<cargo4>-e<cod6>-u.json            (municipio)
   dados/<uf>/<uf><mun5>-z<zona4>-c<cargo4>-e<cod6>-u.json   (zona)
   dados/<ambito>/<ambito>-c<cargo4>-e<cod6>-u.json          (br | zz | uf)
 
-"zz" = EXTERIOR (134 países, 186 ciudades). La divulgación oficial (EA20)
-comienza a las 17:00 de Brasilia.
-
-Diseñado para GitHub Actions: una pasada por ejecución con --una-pasada y
---max-segundos para acotar el tiempo, dejando el estado listo para la siguiente.
+Concurrencia: las zonas se descargan con un pool de hilos (sesiones por hilo)
+bajo un limitador de tráfico global, para cubrir todos los estados en poco
+tiempo sin exceder el límite del TSE (~100 req/s).
 """
 
 import os
@@ -32,6 +19,9 @@ import sys
 import json
 import time
 import argparse
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 import requests
 from datetime import datetime
 
@@ -43,10 +33,10 @@ if hasattr(sys.stdout, "reconfigure"):
 DOMINIO_BASE   = "https://resultados.tse.jus.br"
 AMBIENTE       = "oficial"
 CICLO          = "ele2026"
-CODIGO_ELEICAO = "6257"        # Elección Ordinaria Federal 2026 - 1er turno
+CODIGO_ELEICAO = "6257"
 CODIGO_6D      = "006257"
-PLEITO         = "3220"        # código del pleito (Boletines de Urna)
-CARGO          = "0001"        # Presidente (4 dígitos)
+PLEITO         = "3220"
+CARGO          = "0001"
 
 ARCHIVO_CSV    = "escrutinio_zonas_2026.csv"
 ARCHIVO_ESTADO = "control_versiones_2026.json"
@@ -93,29 +83,52 @@ HEADERS = {
     "Accept": "application/json",
 }
 
-# === GOBERNADOR DE TRÁFICO (el TSE tolera ~100 req/s; somos conservadores) ===
+# === GOBERNADOR DE TRÁFICO GLOBAL (thread-safe) ===
 LIMITE_REQ_POR_SEGUNDO = 60
-_peticiones_segundo = 0
-_segundo_actual = int(time.time())
 
 
-def limitar_trafico():
-    global _peticiones_segundo, _segundo_actual
-    ahora = int(time.time())
-    if ahora != _segundo_actual:
-        _segundo_actual = ahora
-        _peticiones_segundo = 0
-    _peticiones_segundo += 1
-    if _peticiones_segundo > LIMITE_REQ_POR_SEGUNDO:
-        time.sleep(1.0 - (time.time() % 1))
+class _Limitador:
+    """Token bucket compartido entre hilos."""
+
+    def __init__(self, por_segundo):
+        self.por_segundo = float(por_segundo)
+        self.lock = threading.Lock()
+        self.tokens = float(por_segundo)
+        self.ultimo = time.time()
+
+    def adquirir(self):
+        while True:
+            with self.lock:
+                ahora = time.time()
+                self.tokens = min(self.por_segundo,
+                                  self.tokens + (ahora - self.ultimo) * self.por_segundo)
+                self.ultimo = ahora
+                if self.tokens >= 1.0:
+                    self.tokens -= 1.0
+                    return
+                espera = (1.0 - self.tokens) / self.por_segundo
+            time.sleep(espera)
 
 
-def obtener_json(session, url, intentos=3):
-    """GET con reintentos. Devuelve el JSON, o None si 404 o fallo definitivo."""
+LIMITADOR = _Limitador(LIMITE_REQ_POR_SEGUNDO)
+
+_hilo_local = threading.local()
+
+
+def get_session():
+    """Una requests.Session por hilo (Session no es thread-safe)."""
+    s = getattr(_hilo_local, "session", None)
+    if s is None:
+        s = requests.Session()
+        _hilo_local.session = s
+    return s
+
+
+def obtener_json(url, intentos=3):
     for i in range(intentos):
-        limitar_trafico()
+        LIMITADOR.adquirir()
         try:
-            r = session.get(url, headers=HEADERS, timeout=15)
+            r = get_session().get(url, headers=HEADERS, timeout=15)
             if r.status_code == 200:
                 try:
                     return r.json()
@@ -164,7 +177,6 @@ def entero(valor):
 
 
 def extraer_votos_candidatos(data):
-    """Recorre el árbol de cargos/agremiaciones y recoge {numero: vap}."""
     votos = {}
 
     def recorrer(obj):
@@ -213,8 +225,8 @@ def guardar_estado(estado):
 
 
 # === LÓGICA DE RASPA ===
-def cargar_municipios(session):
-    data = obtener_json(session, url_config_municipios())
+def cargar_municipios():
+    data = obtener_json(url_config_municipios())
     if not data:
         return {}
     mapa = {}
@@ -229,8 +241,8 @@ def cargar_municipios(session):
     return mapa
 
 
-def versiones_abrangencia(session, uf):
-    data = obtener_json(session, url_abrangencia(uf))
+def versiones_abrangencia(uf):
+    data = obtener_json(url_abrangencia(uf))
     if not data:
         return {}
     dg = data.get("dg", "")
@@ -249,8 +261,8 @@ def hora_de(data, respaldo=""):
     return f"{data.get('dg', '')} {data.get('hg', '')}".strip() or respaldo
 
 
-def leer_zona(session, uf, municipio, zona):
-    data = obtener_json(session, url_zona(uf, municipio["cd"], zona))
+def leer_zona(uf, municipio, zona):
+    data = obtener_json(url_zona(uf, municipio["cd"], zona))
     if not data:
         return None
     return data, extraer_votos_candidatos(data)
@@ -276,8 +288,20 @@ def fila_zona(uf, municipio, zona, data, votos, hora_tse_ab, n_pasada):
     return fila
 
 
-def registrar_snapshot(session, ambito):
-    data = obtener_json(session, url_unificado(ambito))
+def procesar_municipio(uf, municipio, version, n_pasada):
+    """Descarga todas las zonas de un municipio. Se ejecuta en un hilo."""
+    filas = []
+    for zona in (municipio["zonas"] or [""]):
+        leido = leer_zona(uf, municipio, zona)
+        if not leido:
+            continue
+        data, votos = leido
+        filas.append(fila_zona(uf, municipio, zona, data, votos, version, n_pasada))
+    return filas
+
+
+def registrar_snapshot(ambito):
+    data = obtener_json(url_unificado(ambito))
     if not data:
         return 0
     s = data.get("s", {})
@@ -308,17 +332,17 @@ def registrar_snapshot(session, ambito):
     return 1
 
 
-def realizar_barrido(session, municipios, estado, args, n_pasada, deadline=None):
+def realizar_barrido(municipios, estado, args, n_pasada, deadline=None):
     print(f"\n[+] Ciclo N° {n_pasada} iniciado: {datetime.now().strftime('%H:%M:%S')}")
     zonas_nuevas = 0
     estados = [args.uf] if args.uf else ESTADOS
 
     if not args.sin_serie:
-        snaps = registrar_snapshot(session, "br")
+        snaps = registrar_snapshot("br")
         if "zz" in estados or not args.uf:
-            snaps += registrar_snapshot(session, "zz")
+            snaps += registrar_snapshot("zz")
         for uf in estados:
-            snaps += registrar_snapshot(session, uf)
+            snaps += registrar_snapshot(uf)
         print(f"[i] Snapshots de la serie temporal registrados: {snaps}")
 
     for uf in estados:
@@ -329,16 +353,13 @@ def realizar_barrido(session, municipios, estado, args, n_pasada, deadline=None)
         if not muns_uf:
             continue
         print(f" -> {uf.upper()}: consultando avance...", end="\r")
-        versiones = versiones_abrangencia(session, uf)
+        versiones = versiones_abrangencia(uf)
         if not versiones:
             continue
 
-        filas = []
-        procesados = 0
+        tareas = []
         intentados = 0
         for municipio in muns_uf:
-            if deadline and time.time() > deadline:
-                break
             clave = f"{uf}/{municipio['cd']}"
             version = versiones.get(municipio["cd"])
             if version is None:
@@ -348,61 +369,72 @@ def realizar_barrido(session, municipios, estado, args, n_pasada, deadline=None)
             if args.max_mun and intentados >= args.max_mun:
                 break
             intentados += 1
+            tareas.append((municipio, version))
 
-            zonas = municipio["zonas"] or [""]
-            exito = False
-            for zona in zonas:
-                leido = leer_zona(session, uf, municipio, zona)
-                if not leido:
-                    continue
-                data, votos = leido
-                filas.append(fila_zona(uf, municipio, zona, data, votos, version, n_pasada))
-                zonas_nuevas += 1
-                exito = True
-            if exito:
-                estado[clave] = version
-                procesados += 1
-
+        filas = []
+        procesados = 0
+        if tareas:
+            with ThreadPoolExecutor(max_workers=args.workers) as ex:
+                futuros = {
+                    ex.submit(procesar_municipio, uf, mun, ver, n_pasada): (mun, ver)
+                    for mun, ver in tareas
+                }
+                for fut in as_completed(futuros):
+                    mun, ver = futuros[fut]
+                    try:
+                        resultado = fut.result()
+                    except Exception:
+                        resultado = []
+                    if resultado:
+                        filas.extend(resultado)
+                        estado[f"{uf}/{mun['cd']}"] = ver
+                        procesados += 1
         escribir_filas(filas)
-        guardar_estado(estado)   # resumible: guarda el estado tras cada UF
+        zonas_nuevas += len(filas)
+        guardar_estado(estado)
         print(f" -> {uf.upper()}: {procesados} municipios actualizados.        ")
 
     print(f"[OK] Ciclo N° {n_pasada} terminado. Zonas nuevas escritas: {zonas_nuevas}")
     return zonas_nuevas
 
 
-def construir_padron(session, municipios, args):
-    """Barre todas las zonas y (re)escribe el padrón 2026 de electores."""
+def construir_padron(municipios, args):
     print("[*] Construyendo padrón de electores 2026 (puede tardar unos minutos)...")
     estados = [args.uf] if args.uf else ESTADOS
     total = 0
+
+    def tarea(mun):
+        out = []
+        for zona in (mun["zonas"] or [""]):
+            data = obtener_json(url_zona(uf_actual, mun["cd"], zona))
+            if data:
+                out.append([uf_actual.upper(), mun["cd"], mun["nm"], zona,
+                            entero(data.get("e", {}).get("te"))])
+        return out
+
     with open(ARCHIVO_PADRON, mode="w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow(CABECERA_PADRON)
-        for uf in estados:
-            for municipio in municipios.get(uf, []):
-                for zona in (municipio["zonas"] or [""]):
-                    data = obtener_json(session, url_zona(uf, municipio["cd"], zona))
-                    if not data:
-                        continue
-                    writer.writerow([uf.upper(), municipio["cd"], municipio["nm"],
-                                     zona, entero(data.get("e", {}).get("te"))])
-                    total += 1
-                    if total % 500 == 0:
-                        print(f"    ... {total} zonas procesadas ({uf.upper()})", end="\r")
+        for uf_actual in estados:
+            muns = municipios.get(uf_actual, [])
+            with ThreadPoolExecutor(max_workers=args.workers) as ex:
+                for res in ex.map(tarea, muns):
+                    if res:
+                        writer.writerows(res)
+                        total += len(res)
             f.flush()
-            print(f" -> {uf.upper()}: padrón actualizado.                      ")
+            print(f" -> {uf_actual.upper()}: padrón actualizado.                      ")
     print(f"[OK] Padrón 2026 escrito en {ARCHIVO_PADRON} ({total} zonas)")
 
 
-def probar(session, uf):
+def probar(uf):
     print(f"[*] Probando conectividad y parseo (uf={uf.upper()})...")
     for etiqueta, url in (
         ("NACIONAL", url_unificado("br")),
         ("EXTERIOR", url_unificado("zz")),
         (f"UF {uf.upper()}", url_unificado(uf)),
     ):
-        data = obtener_json(session, url)
+        data = obtener_json(url)
         if not data:
             print(f"[x] Sin respuesta para {url}")
             continue
@@ -410,12 +442,12 @@ def probar(session, uf):
         print(f"[OK] {etiqueta}: dg={data.get('dg')} hg={data.get('hg')} "
               f"secciones={entero(s.get('st'))}/{entero(s.get('ts'))} "
               f"electores={entero(e.get('te'))} votos={entero(v.get('tv'))}")
-    municipios = cargar_municipios(session)
+    municipios = cargar_municipios()
     muns_uf = municipios.get(uf, [])
     if muns_uf:
         municipio = muns_uf[0]
         zona = (municipio["zonas"] or [""])[0]
-        data = obtener_json(session, url_zona(uf, municipio["cd"], zona))
+        data = obtener_json(url_zona(uf, municipio["cd"], zona))
         if data:
             votos = extraer_votos_candidatos(data)
             print(f"[OK] Zona {uf.upper()} {municipio['nm']} z={zona}: "
@@ -431,9 +463,9 @@ def main():
     parser.add_argument("--uf", help="Procesar una sola UF (ej. sp, zz para exterior).")
     parser.add_argument("--una-pasada", action="store_true", help="Un solo ciclo y salir.")
     parser.add_argument("--max-mun", type=int, help="Limite de municipios por UF (pruebas).")
-    parser.add_argument("--max-segundos", type=int,
-                        help="Corta el barrido tras N segundos (útil en CI).")
-    parser.add_argument("--intervalo", type=int, default=45, help="Segundos entre ciclos.")
+    parser.add_argument("--max-segundos", type=int, help="Corta el barrido tras N segundos.")
+    parser.add_argument("--workers", type=int, default=12, help="Hilos concurrentes.")
+    parser.add_argument("--intervalo", type=int, default=20, help="Segundos entre ciclos.")
     parser.add_argument("--probar", action="store_true", help="Validar conectividad y parseo.")
     parser.add_argument("--padron", action="store_true",
                         help="Solo construir padron_2026.csv (electores 2026) y salir.")
@@ -441,46 +473,42 @@ def main():
                         help="No registrar snapshots nacionales/estatales/exterior.")
     args = parser.parse_args()
 
-    with requests.Session() as session:
-        if args.probar:
-            probar(session, args.uf or "sp")
-            return
+    if args.probar:
+        probar(args.uf or "sp")
+        return
 
-        print("[*] zonpasG_rodri — Raspador consolidado TSE 2026 por zona electoral.")
-        print("[*] Ámbitos: 26 estados + DF + exterior (zz).")
-        print(f"[*] Archivo de salida: {ARCHIVO_CSV}")
-        print("[i] La divulgación oficial (EA20) comienza a las 17:00 de Brasilia.")
-        municipios = cargar_municipios(session)
-        if not municipios:
-            print("[x] No se pudo cargar la lista de municipios. Verifique la conexión.")
-            sys.exit(1)
-        total_muns = sum(len(v) for v in municipios.values())
-        print(f"[*] Municipios/ciudades cargados: {total_muns}")
+    print("[*] zonpasG_rodri — Raspador consolidado TSE 2026 por zona electoral.")
+    print(f"[*] Ámbitos: 26 estados + DF + exterior (zz) | hilos: {args.workers}.")
+    print(f"[*] Archivo de salida: {ARCHIVO_CSV}")
+    municipios = cargar_municipios()
+    if not municipios:
+        print("[x] No se pudo cargar la lista de municipios. Verifique la conexión.")
+        sys.exit(1)
+    total_muns = sum(len(v) for v in municipios.values())
+    print(f"[*] Municipios/ciudades cargados: {total_muns}")
 
-        if args.padron:
-            construir_padron(session, municipios, args)
-            return
+    if args.padron:
+        construir_padron(municipios, args)
+        return
 
-        asegurar_csv()
-        asegurar_csv(ARCHIVO_SERIE, CABECERA_SERIE)
-        print(f"[*] Serie temporal: {ARCHIVO_SERIE}")
-        print(f"[i] Para el padrón 2026 use: --padron (genera {ARCHIVO_PADRON}).")
-        estado = cargar_estado()
+    asegurar_csv()
+    asegurar_csv(ARCHIVO_SERIE, CABECERA_SERIE)
+    estado = cargar_estado()
 
-        n_pasada = 1
-        try:
-            while True:
-                deadline = (time.time() + args.max_segundos) if args.max_segundos else None
-                realizar_barrido(session, municipios, estado, args, n_pasada, deadline)
-                guardar_estado(estado)
-                if args.una_pasada:
-                    break
-                print(f"Esperando {args.intervalo} segundos para el próximo barrido...")
-                time.sleep(args.intervalo)
-                n_pasada += 1
-        except KeyboardInterrupt:
+    n_pasada = 1
+    try:
+        while True:
+            deadline = (time.time() + args.max_segundos) if args.max_segundos else None
+            realizar_barrido(municipios, estado, args, n_pasada, deadline)
             guardar_estado(estado)
-            print("\n[!] Interrumpido por el usuario. Estado guardado.")
+            if args.una_pasada:
+                break
+            print(f"Esperando {args.intervalo} segundos para el próximo barrido...")
+            time.sleep(args.intervalo)
+            n_pasada += 1
+    except KeyboardInterrupt:
+        guardar_estado(estado)
+        print("\n[!] Interrumpido por el usuario. Estado guardado.")
 
 
 if __name__ == "__main__":
