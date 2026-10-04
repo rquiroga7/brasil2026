@@ -116,6 +116,7 @@
       <table>
         <thead><tr>
           <th>Estado</th><th class="num">Escrutado</th>
+          <th class="num">Electores 2026</th>
           <th>Proyección (Lula / Flavio / Otros)</th>
           <th class="num">Lula</th><th class="num">Flavio</th>
         </tr></thead>
@@ -275,6 +276,7 @@ function pintarTabla() {
     return `<tr>
       <td><b>${e.nombre}</b> <span class="barlbl">${e.uf}</span></td>
       <td class="num">${fmtPct(e.escrutado)}</td>
+      <td class="num">${fmtNum(e.electores_habilitados)}</td>
       <td>${barra(b)}</td>
       <td class="num lula">${fmtPct(b.lula && b.lula.pct)}</td>
       <td class="num flavio">${fmtPct(b.flavio && b.flavio.pct)}</td>

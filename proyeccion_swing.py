@@ -240,6 +240,7 @@ def proyectar():
 
     n = len(df_base)
     A = np.zeros(n)                 # asistencia estimada 2026
+    H = np.zeros(n)                 # electores habilitados 2026
     state_idx = np.zeros(n, int)
     swing_src = np.zeros(n, int)
     mode = np.zeros(n, int)         # 0=escrutado, 1=prior+swing, 2=fallback
@@ -259,7 +260,9 @@ def proyectar():
             pct22 = float(r["porcentaje_asistencia"]) / 100.0
         except (TypeError, ValueError):
             pct22 = (int(r["electores_asistieron"]) / hab22) if hab22 else 0.0
-        A[i] = electores_2026.get(clave, hab22) * pct22
+        hab2026 = electores_2026.get(clave, hab22)
+        H[i] = hab2026
+        A[i] = hab2026 * pct22
         state_idx[i] = uf_idx.get(uf, 0)
 
         lv = live.get(clave)
@@ -411,6 +414,7 @@ def proyectar():
             "nombre": NOMBRES_UF.get(uf, uf),
             "escrutado": esc,
             "electores": int(A[state_idx == i].sum()),
+            "electores_habilitados": int(H[state_idx == i].sum()),
             "validos_proyectados": int(total),
             "crudo": bloque_crudo(crudo_uf.get(uf, {
                 "l": 0.0, "f": 0.0, "o": 0.0, "valid": 0.0,
