@@ -367,7 +367,7 @@ def ejecutar_extrapolacion():
 
 
 def graficar_desde_historico():
-  """Reconstruye el gráfico RAW vs PROYECTADO a partir del historial CSV."""
+  """Reconstruye el gráfico (RAW, v1 y swing) a partir del historial CSV."""
   if not os.path.exists(ARCHIVO_HISTORICO):
     return
   df = pd.read_csv(ARCHIVO_HISTORICO)
@@ -376,42 +376,50 @@ def graficar_desde_historico():
 
   df_crudo = df[df["tipo"] == "crudo"].reset_index(drop=True)
   df_ext = df[df["tipo"] == "extrapolado"].reset_index(drop=True)
-  if df_crudo.empty or df_ext.empty:
+  df_swing = df[df["tipo"] == "swing"].reset_index(drop=True)
+
+  paneles = []
+  if not df_crudo.empty:
+    paneles.append((df_crudo,
+                    f"VOTOS RAW EN VIVO - TSE (última: {df_crudo['fecha_hora'].iloc[-1]}, "
+                    f"escrutado {df_crudo['escrutado_pct'].iloc[-1]:.2f}%)"))
+  if not df_ext.empty:
+    paneles.append((df_ext,
+                    "PROYECCIÓN v1 ESTRATIFICADA (candidatos + blancos, excluye nulos)"))
+  if not df_swing.empty:
+    paneles.append((df_swing,
+                    "PROYECCIÓN SWING v2 (2022 + swing observado, votos válidos)"))
+  if not paneles:
     return
 
-  x = list(range(1, len(df_crudo) + 1))
-  etiquetas = df_crudo["fecha_hora"].tolist()
+  fig, axes = plt.subplots(len(paneles), 1, figsize=(11, 4 * len(paneles)))
+  if len(paneles) == 1:
+    axes = [axes]
 
-  fig, (ax_raw, ax_ext) = plt.subplots(2, 1, figsize=(11, 8), sharex=True)
-
-  def dibujar(ax, d, titulo):
-    ax.clear()
+  for ax, (d, titulo) in zip(axes, paneles):
+    x = list(range(1, len(d) + 1))
     ax.plot(x, d["lula_pct"], "-", color="#E11B22", linewidth=2,
             label=f"Lula: {d['lula_pct'].iloc[-1]:.2f}%")
-    ax.plot(x, d["bolsonaro_pct"], "-", color="#002B7F", linewidth=2,
+    ax.plot(x, d["bolsonaro_pct"], "-", color="#4C8DFF", linewidth=2,
             label=f"Flavio: {d['bolsonaro_pct'].iloc[-1]:.2f}%")
     ax.plot(x, d["otros_blancos_pct"], "-", color="#7F7F7F", linewidth=2,
             label=f"Otros+Blancos: {d['otros_blancos_pct'].iloc[-1]:.2f}%")
     ax.set_title(titulo, fontsize=11, fontweight="bold")
     ax.set_ylabel("Porcentaje (%)", fontsize=10)
     ax.set_ylim(-2, 102)
+    ax.set_yticks([0, 25, 50, 75, 100])
     ax.grid(True, linestyle="--", alpha=0.5)
     ax.legend(loc="upper right", fontsize=9, framealpha=0.8)
+    ax.xaxis.set_major_locator(ticker.MaxNLocator(nbins=8, integer=True))
+    etiquetas = d["fecha_hora"].tolist()
+    ax.xaxis.set_major_formatter(
+        ticker.FuncFormatter(
+            lambda v, p, e=etiquetas: e[int(v) - 1] if 0 <= int(v) - 1 < len(e) else ""
+        )
+    )
+    plt.setp(ax.get_xticklabels(), rotation=30, ha="right")
 
-  dibujar(ax_raw, df_crudo,
-          f"VOTOS RAW EN VIVO - TSE (última: {etiquetas[-1]}, "
-          f"escrutado {df_crudo['escrutado_pct'].iloc[-1]:.2f}%)")
-  dibujar(ax_ext, df_ext,
-          "PROYECCIÓN MATRICIAL EXTRAPOLADA (excluye nulos)")
-
-  ax_ext.set_xlabel("Hora local (sistema)", fontsize=10)
-  ax_ext.xaxis.set_major_locator(ticker.MaxNLocator(nbins=8, integer=True))
-  ax_ext.xaxis.set_major_formatter(
-      ticker.FuncFormatter(
-          lambda v, p: etiquetas[int(v) - 1] if 0 <= int(v) - 1 < len(etiquetas) else ""
-      )
-  )
-  plt.setp(ax_ext.get_xticklabels(), rotation=30, ha="right")
+  axes[-1].set_xlabel("Hora local (sistema)", fontsize=10)
   fig.tight_layout()
   fig.savefig(ARCHIVO_IMAGEN, dpi=120, bbox_inches="tight")
   plt.close(fig)

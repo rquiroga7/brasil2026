@@ -22,6 +22,7 @@ Salida: datos_proyeccion_swing_2026.json (nacional + por estado, v1 y swing).
 
 import os
 import sys
+import csv
 import json
 from datetime import datetime
 
@@ -38,6 +39,9 @@ from extrapolador10B_rodri import (
     cargar_linea_base_2022,
     cargar_electores_habilitados_2026,
     calcular_fallbacks_jerarquicos,
+    inicializar_log_salida,
+    graficar_desde_historico,
+    ARCHIVO_HISTORICO,
 )
 
 ARCHIVO_ZONAS_2022 = "escrutinio_zonas_2022.csv"
@@ -430,12 +434,33 @@ def proyectar():
     }
 
 
+def registrar_historico(resultado):
+    """Añade el resultado nacional del swing al historial (para el gráfico PNG)."""
+    if not resultado.get("swing_disponible"):
+        return
+    inicializar_log_salida()
+    nat = resultado["nacional"]["swing"]
+    with open(ARCHIVO_HISTORICO, mode="a", newline="", encoding="utf-8") as f:
+        csv.writer(f).writerow([
+            resultado["actualizado"], "nacional", "BR", "swing",
+            resultado["escrutado_pct"],
+            nat["lula"]["votos"], nat["lula"]["pct"],
+            nat["flavio"]["votos"], nat["flavio"]["pct"],
+            nat["otros"]["votos"], nat["otros"]["pct"],
+        ])
+
+
 def main():
     resultado = proyectar()
     if resultado is None:
         return
     with open(ARCHIVO_JSON_SWING, "w", encoding="utf-8") as f:
         json.dump(resultado, f, ensure_ascii=False, indent=2)
+    registrar_historico(resultado)
+    try:
+        graficar_desde_historico()
+    except Exception as e:
+        print(f"[!] No se pudo regenerar el gráfico: {e}")
     etiqueta = "SWING" if resultado["swing_disponible"] else "v1 (fallback, sin 2022)"
     print(f"[✓] Proyección {etiqueta} escrita en {ARCHIVO_JSON_SWING} "
           f"(escrutado {resultado['escrutado_pct']:.2f}%)")

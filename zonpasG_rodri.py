@@ -84,7 +84,7 @@ HEADERS = {
 }
 
 # === GOBERNADOR DE TRÁFICO GLOBAL (thread-safe) ===
-LIMITE_REQ_POR_SEGUNDO = 60
+LIMITE_REQ_POR_SEGUNDO = 80
 
 
 class _Limitador:
@@ -334,7 +334,6 @@ def registrar_snapshot(ambito):
 
 def realizar_barrido(municipios, estado, args, n_pasada, deadline=None):
     print(f"\n[+] Ciclo N° {n_pasada} iniciado: {datetime.now().strftime('%H:%M:%S')}")
-    zonas_nuevas = 0
     estados = [args.uf] if args.uf else ESTADOS
 
     if not args.sin_serie:
@@ -345,57 +344,52 @@ def realizar_barrido(municipios, estado, args, n_pasada, deadline=None):
             snaps += registrar_snapshot(uf)
         print(f"[i] Snapshots de la serie temporal registrados: {snaps}")
 
+    # 1) Recolectar TODAS las tareas (de todos los estados) antes de descargar,
+    #    para que los estados grandes (SP, RJ, ...) no queden para el final.
+    tareas = []
     for uf in estados:
-        if deadline and time.time() > deadline:
-            print("[i] Tiempo máximo alcanzado; se corta el barrido.")
-            break
         muns_uf = municipios.get(uf, [])
         if not muns_uf:
             continue
-        print(f" -> {uf.upper()}: consultando avance...", end="\r")
         versiones = versiones_abrangencia(uf)
         if not versiones:
             continue
-
-        tareas = []
         intentados = 0
         for municipio in muns_uf:
             clave = f"{uf}/{municipio['cd']}"
             version = versiones.get(municipio["cd"])
-            if version is None:
-                continue
-            if estado.get(clave) == version:
+            if version is None or estado.get(clave) == version:
                 continue
             if args.max_mun and intentados >= args.max_mun:
                 break
             intentados += 1
-            tareas.append((municipio, version))
+            tareas.append((uf, municipio, version))
+    print(f"[i] Tareas pendientes: {len(tareas)} municipios.")
 
-        filas = []
-        procesados = 0
-        if tareas:
-            with ThreadPoolExecutor(max_workers=args.workers) as ex:
-                futuros = {
-                    ex.submit(procesar_municipio, uf, mun, ver, n_pasada): (mun, ver)
-                    for mun, ver in tareas
-                }
-                for fut in as_completed(futuros):
-                    mun, ver = futuros[fut]
-                    try:
-                        resultado = fut.result()
-                    except Exception:
-                        resultado = []
-                    if resultado:
-                        filas.extend(resultado)
-                        estado[f"{uf}/{mun['cd']}"] = ver
-                        procesados += 1
-        escribir_filas(filas)
-        zonas_nuevas += len(filas)
-        guardar_estado(estado)
-        print(f" -> {uf.upper()}: {procesados} municipios actualizados.        ")
+    # 2) Descargar en paralelo con un único pool (cubre todos los estados a la vez).
+    filas = []
+    procesados = 0
+    with ThreadPoolExecutor(max_workers=args.workers) as ex:
+        futuros = {
+            ex.submit(procesar_municipio, uf, mun, ver, n_pasada): (uf, mun, ver)
+            for uf, mun, ver in tareas
+        }
+        for fut in as_completed(futuros):
+            uf, mun, ver = futuros[fut]
+            try:
+                resultado = fut.result()
+            except Exception:
+                resultado = []
+            if resultado:
+                filas.extend(resultado)
+                estado[f"{uf}/{mun['cd']}"] = ver
+                procesados += 1
 
-    print(f"[OK] Ciclo N° {n_pasada} terminado. Zonas nuevas escritas: {zonas_nuevas}")
-    return zonas_nuevas
+    escribir_filas(filas)
+    guardar_estado(estado)
+    print(f"[OK] Ciclo N° {n_pasada} terminado. Municipios actualizados: "
+          f"{procesados}, zonas: {len(filas)}")
+    return len(filas)
 
 
 def construir_padron(municipios, args):
@@ -464,7 +458,7 @@ def main():
     parser.add_argument("--una-pasada", action="store_true", help="Un solo ciclo y salir.")
     parser.add_argument("--max-mun", type=int, help="Limite de municipios por UF (pruebas).")
     parser.add_argument("--max-segundos", type=int, help="Corta el barrido tras N segundos.")
-    parser.add_argument("--workers", type=int, default=12, help="Hilos concurrentes.")
+    parser.add_argument("--workers", type=int, default=32, help="Hilos concurrentes.")
     parser.add_argument("--intervalo", type=int, default=20, help="Segundos entre ciclos.")
     parser.add_argument("--probar", action="store_true", help="Validar conectividad y parseo.")
     parser.add_argument("--padron", action="store_true",
