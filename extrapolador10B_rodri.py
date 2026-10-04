@@ -454,41 +454,55 @@ def graficar_desde_historico():
 
 
 def graficar_simulacion_swing():
-  """Fan chart: % proyectado (swing) de cada candidato según avanza el escrutinio."""
-  if not os.path.exists(ARCHIVO_HIST_SWING):
+  """Trayectoria del % CONTADO (raw) vs % escrutado, proyectada al final swing (100%)."""
+  if not os.path.exists(ARCHIVO_HISTORICO):
     return
-  df = pd.read_csv(ARCHIVO_HIST_SWING)
-  if df.empty:
+  df = pd.read_csv(ARCHIVO_HISTORICO)
+  crudo = df[df["tipo"] == "crudo"].copy()
+  if crudo.empty:
     return
+  x = pd.to_numeric(crudo["escrutado_pct"], errors="coerce")
 
-  x = pd.to_numeric(df["escrutado_pct"], errors="coerce")
+  finales, bandas = {}, {}
+  if os.path.exists(ARCHIVO_HIST_SWING):
+    sw = pd.read_csv(ARCHIVO_HIST_SWING)
+    if not sw.empty:
+      last = sw.iloc[-1]
+      finales = {"lula": last.get("lula_pct"), "flavio": last.get("flavio_pct"),
+                 "otros": last.get("otros_pct")}
+      bandas = {"lula": (last.get("lula_p5"), last.get("lula_p95")),
+                "flavio": (last.get("flavio_p5"), last.get("flavio_p95"))}
+
   fig, ax = plt.subplots(figsize=(11, 6))
+  series = [("lula", "lula", "Lula", "#E11B22"),
+            ("bolsonaro", "flavio", "Flavio", "#4C8DFF"),
+            ("otros_blancos", "otros", "Otros", "#7F7F7F")]
 
-  # Bandas de incertidumbre p5–p95 (Lula y Flavio)
-  for col, color in (("lula", "#E11B22"), ("flavio", "#4C8DFF")):
-    p5 = f"{col}_p5"
-    p95 = f"{col}_p95"
-    if p5 in df.columns and p95 in df.columns:
-      ax.fill_between(x, pd.to_numeric(df[p5], errors="coerce"),
-                      pd.to_numeric(df[p95], errors="coerce"),
-                      color=color, alpha=0.15, linewidth=0)
-
-  series = [("lula", "Lula", "#E11B22"), ("flavio", "Flavio", "#4C8DFF"),
-            ("otros", "Otros", "#7F7F7F")]
-  for col, nombre, color in series:
-    y = pd.to_numeric(df[f"{col}_pct"], errors="coerce")
+  for col, key, nombre, color in series:
+    y = pd.to_numeric(crudo[f"{col}_pct"], errors="coerce")
     ax.plot(x, y, "-", color=color, linewidth=2,
-            label=f"{nombre}: {y.iloc[-1]:.2f}% (proyectado)")
-    val = y.iloc[-1]
-    ax.axhline(val, color=color, linestyle=":", linewidth=1, alpha=0.7)
-    ax.text(101.5, val, f"{val:.1f}%", color=color, va="center", fontsize=9)
+            label=f"{nombre} (contado): {y.iloc[-1]:.2f}%")
+    fin = finales.get(key)
+    if fin is not None and not pd.isna(fin):
+      fin = float(fin)
+      # conecta el último valor contado con la predicción swing a 100%
+      ax.plot([x.iloc[-1], 100], [y.iloc[-1], fin], "--", color=color, linewidth=1.6)
+      ax.plot([100], [fin], "o", color=color, markersize=5)
+      ax.text(101.5, fin, f"{fin:.1f}%", color=color, va="center", fontsize=9)
+    if key in bandas:
+      lo, hi = bandas[key]
+      try:
+        lo, hi = float(lo), float(hi)
+        ax.plot([100, 100], [lo, hi], color=color, linewidth=2)
+      except (TypeError, ValueError):
+        pass
 
-  ax.set_xlim(0, 105)
+  ax.set_xlim(0, 106)
   ax.set_ylim(0, 65)
   ax.set_yticks([0, 25, 50, 65])
   ax.set_xlabel("% escrutado", fontsize=10)
-  ax.set_ylabel("Porcentaje proyectado (%)", fontsize=10)
-  ax.set_title("Simulación swing: proyección según avanza el escrutinio "
+  ax.set_ylabel("Porcentaje (%)", fontsize=10)
+  ax.set_title("Simulación: % contado (raw) y proyección swing a 100% "
                f"(última: {x.iloc[-1]:.2f}% contado)",
                fontsize=11, fontweight="bold")
   ax.grid(True, linestyle="--", alpha=0.5)
