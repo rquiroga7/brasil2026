@@ -300,7 +300,8 @@ def proyectar():
         if swing_disponible and p22 and p22["valid"] > 0:
             mode[i] = 1
             prior[i] = [p22["l"]/p22["valid"], p22["f"]/p22["valid"], p22["o"]/p22["valid"]]
-            swing_src[i] = uf_idx.get(uf, nat_g) if uf in swings else nat_g
+            # v2 = swing UNIFORME NACIONAL (un único swing para todo el país)
+            swing_src[i] = nat_g
         else:
             mode[i] = 2
             if m in fb_val["municipio"]:

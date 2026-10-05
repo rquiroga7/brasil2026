@@ -1,25 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-proyeccion_v4.py — Proyección v4: swing DIFERENCIAL (calibración 2022->2026).
+proyeccion_v4.py — Proyección v4: swing uniforme POR ESTADO.
 
-Idea: en vez de un swing uniforme (v2: proj = 2022 + swing_estado, que equivale a
-"media_2026 + (2022_zona - media_2022)"), se ajusta por estado una recta
-ponderada
+Para cada zona no escrutada: proj = % 2022 de la zona + swing del estado
+(media de (cur − pri) de las zonas ya escrutadas del estado, ponderada por
+tamaño × completitud). Si el estado tiene pocos datos, usa el swing nacional.
 
-        cur_2026 = a + b * pri_2022
-
-sobre las zonas ya escrutadas, y se predice cada zona no escrutada con
-
-        proj(z) = a + b * pri(z).
-
-* b = 1  -> swing uniforme (equivale a v2 con referencia de estado).
-* b < 1  -> las diferencias entre zonas se comprimen (regresión a la media).
-* b > 1  -> se amplifican.
-Así v4 usa las DIFERENCIAS entre zonas y su nivel 2022 para estimar cada zona,
-sin depender de la media bruta de la muestra ni de zonas "parecidas" (v3).
-
-Respaldo: regresión del estado -> regresión nacional -> v2 (swing) -> fallback válido.
-Salida: datos_proyeccion_v4_2026.json.
+Salida: datos_proyeccion_v4_2026.json (nacional + por estado).
 """
 
 import os
@@ -49,8 +36,7 @@ from proyeccion_swing import (
 from proyeccion_v3 import _bloque, _bloque_crudo, _pct
 
 ARCHIVO_JSON_V4 = "datos_proyeccion_v4_2026.json"
-MIN_N = 5          # zonas escrutadas mínimas para ajustar la recta
-B_MIN, B_MAX = 0.3, 1.7
+MIN_N = 5   # zonas escrutadas mínimas para usar el swing propio del estado
 
 ESTADOS = ["ac", "al", "am", "ap", "ba", "ce", "df", "es", "go", "ma", "mg", "ms", "mt",
            "pa", "pb", "pe", "pi", "pr", "rj", "rn", "ro", "rr", "rs", "sc", "se", "sp", "to"]
@@ -86,27 +72,6 @@ def cargar_secciones_zonas():
     return out
 
 
-def _ajustar(X, Y, W):
-    """OLS ponderado por candidato: cur = a + b*pri. Devuelve (a[3], b[3])."""
-    a = np.zeros(3)
-    b = np.ones(3)
-    sw = W.sum()
-    if sw <= 0:
-        return a, b
-    for c in range(3):
-        x, y = X[:, c], Y[:, c]
-        xm = (W * x).sum() / sw
-        ym = (W * y).sum() / sw
-        var = (W * (x - xm) ** 2).sum() / sw
-        cov = (W * (x - xm) * (y - ym)).sum() / sw
-        if var > 1e-9:
-            b[c] = min(max(cov / var, B_MIN), B_MAX)
-        else:
-            b[c] = 1.0
-        a[c] = ym - b[c] * xm
-    return a, b
-
-
 def proyectar_v4():
     df_base = cargar_linea_base_2022()
     if df_base is None:
@@ -122,8 +87,9 @@ def proyectar_v4():
     fb_val = calcular_fallbacks_valid(df_vivo)
     sec_zonas = cargar_secciones_zonas()
 
-    # --- zonas escrutadas por estado (2022 y 2026) ---
-    est = {}
+    # --- swing por estado (ponderado por tamaño 2022 x completitud) ---
+    acc = {}   # uf -> [suma_w, suma_w*dl, suma_w*df, suma_w*do, n]
+    nat = [0.0, 0.0, 0.0, 0.0, 0]
     for clave, lv in live.items():
         if lv["valid"] <= 0:
             continue
@@ -131,31 +97,27 @@ def proyectar_v4():
         if not p or p["valid"] <= 0:
             continue
         uf = lv["uf"] or p["uf"]
-        d = est.setdefault(uf, {"pri": [], "cur": [], "w": []})
-        d["pri"].append([p["l"] / p["valid"], p["f"] / p["valid"], p["o"] / p["valid"]])
-        d["cur"].append([lv["l"] / lv["valid"], lv["f"] / lv["valid"], lv["o"] / lv["valid"]])
-        # peso = tamaño (válidos 2022) x completitud (secciones contadas / totales)
         ts = sec_zonas.get(f"{clave[0]}|{clave[1]}", 0.0)
         st = lv.get("st", 0.0)
-        if ts > 0:
-            comp = min(1.0, st / ts)
-        else:
-            comp = min(1.0, lv["valid"] / p["valid"]) if p["valid"] > 0 else 0.0
-        d["w"].append(p["valid"] * comp)
+        comp = min(1.0, st / ts) if ts > 0 else min(1.0, lv["valid"] / p["valid"])
+        w = p["valid"] * comp
+        pri = [p["l"] / p["valid"], p["f"] / p["valid"], p["o"] / p["valid"]]
+        cur = [lv["l"] / lv["valid"], lv["f"] / lv["valid"], lv["o"] / lv["valid"]]
+        d = acc.setdefault(uf, [0.0, 0.0, 0.0, 0.0, 0])
+        for c in range(3):
+            d[1 + c] += w * (cur[c] - pri[c])
+        d[0] += w
+        d[4] += 1
+        for c in range(3):
+            nat[1 + c] += w * (cur[c] - pri[c])
+        nat[0] += w
+        nat[4] += 1
 
-    coef = {}
-    for uf, d in est.items():
-        X = np.array(d["pri"]); Y = np.array(d["cur"]); W = np.array(d["w"], float)
-        if len(X) >= MIN_N:
-            coef[uf] = _ajustar(X, Y, W)
-    # regresión nacional (respaldo)
-    if est:
-        Xn = np.vstack([np.array(d["pri"]) for d in est.values()])
-        Yn = np.vstack([np.array(d["cur"]) for d in est.values()])
-        Wn = np.concatenate([np.array(d["w"], float) for d in est.values()])
-        coef_nat = _ajustar(Xn, Yn, Wn)
-    else:
-        coef_nat = (np.zeros(3), np.ones(3))
+    swing_uf = {}
+    for uf, d in acc.items():
+        if d[0] > 0 and d[4] >= MIN_N:
+            swing_uf[uf] = np.array([d[1] / d[0], d[2] / d[0], d[3] / d[0]])
+    nat_swing = np.array([nat[1] / nat[0], nat[2] / nat[0], nat[3] / nat[0]]) if nat[0] > 0 else np.zeros(3)
 
     # --- arrays por zona base ---
     ufs = sorted(df_base["estado_uf"].unique())
@@ -184,8 +146,8 @@ def proyectar_v4():
         p = dict22.get(clave)
         if p and p["valid"] > 0:
             pri = np.array([p["l"] / p["valid"], p["f"] / p["valid"], p["o"] / p["valid"]])
-            a, b = coef.get(uf, coef_nat)
-            v4sh[i] = normalizar((a + b * pri)[None, :])[0]
+            sw = swing_uf.get(uf, nat_swing)
+            v4sh[i] = normalizar((pri + sw)[None, :])[0]
         else:
             if m in fb_val["municipio"]:
                 s = fb_val["municipio"][m]
@@ -251,7 +213,7 @@ def main():
         return
     with open(ARCHIVO_JSON_V4, "w", encoding="utf-8") as f:
         json.dump(resultado, f, ensure_ascii=False, indent=2)
-    print(f"[✓] Proyección v4 (swing diferencial) escrita en {ARCHIVO_JSON_V4} "
+    print(f"[✓] Proyección v4 (swing por estado) escrita en {ARCHIVO_JSON_V4} "
           f"(escrutado {resultado['escrutado_pct']:.2f}%)")
 
 

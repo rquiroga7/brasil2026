@@ -71,6 +71,16 @@ def cargar_ref(turno=TURNO):
     return None
 
 
+_MODELO = None
+
+
+def obtener_modelo():
+    global _MODELO
+    if _MODELO is None:
+        _MODELO = construir_modelo()
+    return _MODELO
+
+
 def construir_modelo():
     ref = cargar_ref()
     jer = json.load(open(os.path.join(RAIZ, "data", "mun-jerarquia.json"), encoding="utf-8"))
@@ -135,7 +145,7 @@ def cargar_secciones_total():
 
 
 def proyectar():
-    modelo = construir_modelo()
+    modelo = obtener_modelo()
     tse2ibge = cargar_mapa_tse_ibge()
     df = cargar_vivo_2026()
     if df is None or df.empty:
