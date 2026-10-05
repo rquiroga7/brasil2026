@@ -242,8 +242,9 @@ def proyectar():
                                "total": 0.0, "blancos": 0.0, "nulos": 0.0})
         esc = _pct(cd["total"], max(total, 1.0))  # aproximado
         crudo_blk = _bloque_crudo(cd)
+        scht_proj = _bloque(vec[0], vec[1], vec[2:].sum(), total)
         if ok:
-            scht_blk = _bloque(vec[0], vec[1], vec[2:].sum(), total)
+            scht_blk = scht_proj
         else:
             scht_blk = {"lula": crudo_blk["lula"], "flavio": crudo_blk["flavio"],
                         "otros": crudo_blk["otros"]}
@@ -252,12 +253,14 @@ def proyectar():
             "electores_habilitados": int(elec_uf.get(uf, 0)),
             "crudo": crudo_blk,
             "schteingart": scht_blk,
+            "schteingart_nogate": scht_proj,
         })
     estados.sort(key=lambda e: -e["electores_habilitados"])
 
     crudo_nac_blk = _bloque_crudo(crudo_nat)
+    nac_proj = _bloque(tot[0], tot[1], tot[2:].sum(), tot.sum())
     if ok:
-        nac_scht = _bloque(tot[0], tot[1], tot[2:].sum(), tot.sum())
+        nac_scht = nac_proj
     else:
         nac_scht = {"lula": crudo_nac_blk["lula"], "flavio": crudo_nac_blk["flavio"],
                     "otros": crudo_nac_blk["otros"]}
@@ -269,7 +272,7 @@ def proyectar():
         "n_uf": int(res["n_uf"]),
         "escrutado_pct": escrutado_nat,
         "nacional": {"escrutado": escrutado_nat, "crudo": crudo_nac_blk,
-                     "schteingart": nac_scht},
+                     "schteingart": nac_scht, "schteingart_nogate": nac_proj},
         "estados": estados,
     }
 

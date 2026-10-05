@@ -104,7 +104,7 @@ def construir_payload():
                     "v1": v1.get("proyectado"), "swing": v1.get("proyectado")}
 
     estados = swing.get("estados", [])
-    # Añadir schteingart (v3) y v4 al nacional y a cada estado.
+    # Añadir schteingart, schteingart sin gate y v4 al nacional y a cada estado.
     for metodo, data in (("schteingart", scht), ("v4", v4)):
         nat_m = (data.get("nacional") or {}).get(metodo)
         if nat_m:
@@ -113,6 +113,13 @@ def construir_payload():
         for e in estados:
             if por_uf.get(e.get("uf")):
                 e[metodo] = por_uf[e["uf"]]
+    nat_ng = (scht.get("nacional") or {}).get("schteingart_nogate")
+    if nat_ng:
+        nacional["scht_ng"] = nat_ng
+    por_uf_ng = {e.get("uf"): e.get("schteingart_nogate") for e in scht.get("estados", [])}
+    for e in estados:
+        if por_uf_ng.get(e.get("uf")):
+            e["scht_ng"] = por_uf_ng[e["uf"]]
 
     payload = {
         "actualizado": v1.get("actualizado") or swing.get("actualizado"),

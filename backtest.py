@@ -46,7 +46,8 @@ METODOS = OrderedDict([
     ("crudo", ("#9AA0A6", "Conteo crudo TSE (muestra sesgada)")),
     ("v1",  ("#E11B22", "v1 Estratificado: media de lo contado")),
     ("v2",  ("#4C8DFF", "v2 Swing uniforme NACIONAL: 2022 + swing nacional")),
-    ("scht", ("#2E7D32", "Schteingart: swing logit jerárquico IBGE")),
+    ("scht", ("#2E7D32", "Schteingart (con gate): crudo hasta estar listo")),
+    ("scht_ng", ("#8B5CF6", "Schteingart SIN gate: proyecta siempre")),
     ("v4",  ("#B8860B", "v4 Swing por ESTADO: 2022 + swing del estado")),
 ])
 
@@ -125,6 +126,9 @@ def proyectar(path):
     if r5 and r5.get("nacional", {}).get("schteingart"):
         b = r5["nacional"]["schteingart"]
         nac["scht"] = (b["lula"]["pct"], b["flavio"]["pct"])
+    if r5 and r5.get("nacional", {}).get("schteingart_nogate"):
+        b = r5["nacional"]["schteingart_nogate"]
+        nac["scht_ng"] = (b["lula"]["pct"], b["flavio"]["pct"])
     # estados
     est = {}
     if r2:
@@ -146,6 +150,9 @@ def proyectar(path):
             if e.get("schteingart"):
                 est.setdefault(e["uf"], {})["scht"] = (e["schteingart"]["lula"]["pct"],
                                                        e["schteingart"]["flavio"]["pct"])
+            if e.get("schteingart_nogate"):
+                est.setdefault(e["uf"], {})["scht_ng"] = (e["schteingart_nogate"]["lula"]["pct"],
+                                                          e["schteingart_nogate"]["flavio"]["pct"])
     return nac, est
 
 
@@ -278,6 +285,7 @@ def graficar(acum_a, acum_b):
             ax.plot(xs, ys, "o-", color=color, linewidth=2, label=f"{m}: {explic}")
     ax.set_xlabel("% escrutado del propio estado", fontsize=10)
     ax.set_ylabel("Error |ΔLula| + |ΔFlavio| (puntos)", fontsize=10)
+    ax.set_ylim(0, 20)
     ax.set_title("B) Error por estado según su propio % escrutado (prom. estados × 3 raspados)",
                  fontsize=11, fontweight="bold")
     ax.grid(True, linestyle="--", alpha=0.5)
