@@ -1,39 +1,39 @@
 {
-  "actualizado": "2026-10-04 20:55:24",
+  "actualizado": "2026-10-04 21:50:24",
   "metodo": "v4",
-  "escrutado_pct": 90.83,
+  "escrutado_pct": 97.2,
   "nacional": {
-    "escrutado": 90.83,
+    "escrutado": 97.2,
     "crudo": {
       "lula": {
-        "votos": 48277600,
-        "pct": 44.34
+        "votos": 52513087,
+        "pct": 45.08
       },
       "flavio": {
-        "votos": 51928691,
-        "pct": 47.69
+        "votos": 54829886,
+        "pct": 47.07
       },
       "otros": {
-        "votos": 8674598,
-        "pct": 7.97
+        "votos": 9144306,
+        "pct": 7.85
       },
-      "validos": 108880889,
-      "total": 114296343,
-      "blancos": 2104098,
-      "nulos": 3311356
+      "validos": 116487279,
+      "total": 122321763,
+      "blancos": 2252727,
+      "nulos": 3581757
     },
     "v4": {
       "lula": {
-        "votos": 56347415,
-        "pct": 44.98
+        "votos": 56500677,
+        "pct": 45.11
       },
       "flavio": {
-        "votos": 59001670,
-        "pct": 47.1
+        "votos": 58888381,
+        "pct": 47.01
       },
       "otros": {
-        "votos": 9910871,
-        "pct": 7.91
+        "votos": 9870899,
+        "pct": 7.88
       }
     }
   },
@@ -41,227 +41,227 @@
     {
       "uf": "SP",
       "nombre": "São Paulo",
-      "escrutado": 92.56,
+      "escrutado": 95.78,
       "electores_habilitados": 34213927,
       "crudo": {
         "lula": {
-          "votos": 9017075,
-          "pct": 38.29
+          "votos": 9343232,
+          "pct": 38.34
         },
         "flavio": {
-          "votos": 12192380,
-          "pct": 51.78
+          "votos": 12609085,
+          "pct": 51.74
         },
         "otros": {
-          "votos": 2338923,
+          "votos": 2418881,
           "pct": 9.93
         },
-        "validos": 23548378,
-        "total": 25013975,
-        "blancos": 597288,
-        "nulos": 868309
+        "validos": 24371198,
+        "total": 25890893,
+        "blancos": 620788,
+        "nulos": 898907
       },
       "v4": {
         "lula": {
-          "votos": 10315773,
-          "pct": 38.45
+          "votos": 10319497,
+          "pct": 38.47
         },
         "flavio": {
-          "votos": 13844403,
-          "pct": 51.61
+          "votos": 13843902,
+          "pct": 51.6
         },
         "otros": {
-          "votos": 2666828,
-          "pct": 9.94
+          "votos": 2663604,
+          "pct": 9.93
         }
       }
     },
     {
       "uf": "MG",
       "nombre": "Minas Gerais",
-      "escrutado": 86.66,
+      "escrutado": 95.33,
       "electores_habilitados": 16372372,
       "crudo": {
         "lula": {
-          "votos": 4450879,
-          "pct": 42.56
+          "votos": 4956685,
+          "pct": 43.1
         },
         "flavio": {
-          "votos": 5103877,
-          "pct": 48.81
+          "votos": 5566786,
+          "pct": 48.4
         },
         "otros": {
-          "votos": 902515,
-          "pct": 8.63
+          "votos": 977574,
+          "pct": 8.5
         },
-        "validos": 10457271,
-        "total": 11030784,
-        "blancos": 236062,
-        "nulos": 337451
+        "validos": 11501045,
+        "total": 12134979,
+        "blancos": 258698,
+        "nulos": 375236
       },
       "v4": {
         "lula": {
-          "votos": 5509935,
-          "pct": 43.29
+          "votos": 5512776,
+          "pct": 43.31
         },
         "flavio": {
-          "votos": 6126955,
-          "pct": 48.13
+          "votos": 6134505,
+          "pct": 48.19
         },
         "otros": {
-          "votos": 1092319,
-          "pct": 8.58
+          "votos": 1081928,
+          "pct": 8.5
         }
       }
     },
     {
       "uf": "RJ",
       "nombre": "Río de Janeiro",
-      "escrutado": 85.45,
+      "escrutado": 98.65,
       "electores_habilitados": 12857648,
       "crudo": {
         "lula": {
-          "votos": 3167523,
-          "pct": 39.21
+          "votos": 3672337,
+          "pct": 39.41
         },
         "flavio": {
-          "votos": 4299946,
-          "pct": 53.23
+          "votos": 4939122,
+          "pct": 53.01
         },
         "otros": {
-          "votos": 611025,
-          "pct": 7.56
+          "votos": 706611,
+          "pct": 7.58
         },
-        "validos": 8078494,
-        "total": 8493180,
-        "blancos": 170244,
-        "nulos": 244442
+        "validos": 9318070,
+        "total": 9805375,
+        "blancos": 200907,
+        "nulos": 286398
       },
       "v4": {
         "lula": {
-          "votos": 3900377,
-          "pct": 39.24
+          "votos": 3919884,
+          "pct": 39.44
         },
         "flavio": {
-          "votos": 5280952,
-          "pct": 53.13
+          "votos": 5264937,
+          "pct": 52.97
         },
         "otros": {
-          "votos": 757796,
-          "pct": 7.62
+          "votos": 754305,
+          "pct": 7.59
         }
       }
     },
     {
       "uf": "BA",
       "nombre": "Bahía",
-      "escrutado": 82.82,
+      "escrutado": 98.58,
       "electores_habilitados": 11312752,
       "crudo": {
         "lula": {
-          "votos": 4556051,
-          "pct": 65.33
+          "votos": 5475179,
+          "pct": 65.93
         },
         "flavio": {
-          "votos": 2035396,
-          "pct": 29.19
+          "votos": 2384950,
+          "pct": 28.72
         },
         "otros": {
-          "votos": 382572,
-          "pct": 5.49
+          "votos": 443780,
+          "pct": 5.34
         },
-        "validos": 6974019,
-        "total": 7379284,
-        "blancos": 128179,
-        "nulos": 277086
+        "validos": 8303909,
+        "total": 8783670,
+        "blancos": 151116,
+        "nulos": 328645
       },
       "v4": {
         "lula": {
-          "votos": 5837528,
-          "pct": 65.52
+          "votos": 5875624,
+          "pct": 65.95
         },
         "flavio": {
-          "votos": 2586532,
-          "pct": 29.03
+          "votos": 2555272,
+          "pct": 28.68
         },
         "otros": {
-          "votos": 485760,
-          "pct": 5.45
+          "votos": 478924,
+          "pct": 5.38
         }
       }
     },
     {
       "uf": "PR",
       "nombre": "Paraná",
-      "escrutado": 95.67,
+      "escrutado": 95.85,
       "electores_habilitados": 8540345,
       "crudo": {
         "lula": {
-          "votos": 1986932,
-          "pct": 31.06
+          "votos": 1992990,
+          "pct": 31.09
         },
         "flavio": {
-          "votos": 3836500,
-          "pct": 59.98
+          "votos": 3843689,
+          "pct": 59.96
         },
         "otros": {
-          "votos": 572741,
+          "votos": 573539,
           "pct": 8.95
         },
-        "validos": 6396173,
-        "total": 6645142,
-        "blancos": 119265,
-        "nulos": 129704
+        "validos": 6410218,
+        "total": 6659707,
+        "blancos": 119483,
+        "nulos": 130006
       },
       "v4": {
         "lula": {
-          "votos": 2142538,
-          "pct": 31.15
+          "votos": 2143563,
+          "pct": 31.16
         },
         "flavio": {
-          "votos": 4119558,
-          "pct": 59.89
+          "votos": 4118745,
+          "pct": 59.88
         },
         "otros": {
-          "votos": 616108,
-          "pct": 8.96
+          "votos": 615897,
+          "pct": 8.95
         }
       }
     },
     {
       "uf": "RS",
       "nombre": "Rio Grande do Sul",
-      "escrutado": 96.03,
+      "escrutado": 96.53,
       "electores_habilitados": 8522545,
       "crudo": {
         "lula": {
-          "votos": 2254050,
-          "pct": 35.8
+          "votos": 2266162,
+          "pct": 35.81
         },
         "flavio": {
-          "votos": 3496857,
-          "pct": 55.55
+          "votos": 3514985,
+          "pct": 55.54
         },
         "otros": {
-          "votos": 544584,
+          "votos": 547287,
           "pct": 8.65
         },
-        "validos": 6295491,
-        "total": 6569441,
-        "blancos": 145209,
-        "nulos": 128741
+        "validos": 6328434,
+        "total": 6603753,
+        "blancos": 145987,
+        "nulos": 129332
       },
       "v4": {
         "lula": {
-          "votos": 2452628,
-          "pct": 35.85
+          "votos": 2453225,
+          "pct": 35.86
         },
         "flavio": {
-          "votos": 3796569,
-          "pct": 55.5
+          "votos": 3795994,
+          "pct": 55.49
         },
         "otros": {
-          "votos": 591649,
+          "votos": 591628,
           "pct": 8.65
         }
       }
@@ -269,37 +269,37 @@
     {
       "uf": "PE",
       "nombre": "Pernambuco",
-      "escrutado": 91.25,
+      "escrutado": 98.4,
       "electores_habilitados": 7223450,
       "crudo": {
         "lula": {
-          "votos": 3216221,
-          "pct": 62.9
+          "votos": 3488407,
+          "pct": 63.27
         },
         "flavio": {
-          "votos": 1612080,
-          "pct": 31.53
+          "votos": 1719425,
+          "pct": 31.19
         },
         "otros": {
-          "votos": 285083,
-          "pct": 5.58
+          "votos": 305564,
+          "pct": 5.54
         },
-        "validos": 5113384,
-        "total": 5395662,
-        "blancos": 100339,
-        "nulos": 181939
+        "validos": 5513396,
+        "total": 5818591,
+        "blancos": 108065,
+        "nulos": 197130
       },
       "v4": {
         "lula": {
-          "votos": 3736318,
-          "pct": 63.19
+          "votos": 3740810,
+          "pct": 63.26
         },
         "flavio": {
-          "votos": 1849031,
-          "pct": 31.27
+          "votos": 1844498,
+          "pct": 31.19
         },
         "otros": {
-          "votos": 327715,
+          "votos": 327755,
           "pct": 5.54
         }
       }
@@ -307,113 +307,113 @@
     {
       "uf": "CE",
       "nombre": "Ceará",
-      "escrutado": 85.74,
+      "escrutado": 100.03,
       "electores_habilitados": 6996545,
       "crudo": {
         "lula": {
-          "votos": 2931608,
-          "pct": 62.19
+          "votos": 3465251,
+          "pct": 63.05
         },
         "flavio": {
-          "votos": 1515421,
-          "pct": 32.15
+          "votos": 1729754,
+          "pct": 31.47
         },
         "otros": {
-          "votos": 267019,
-          "pct": 5.66
+          "votos": 301416,
+          "pct": 5.48
         },
-        "validos": 4714048,
-        "total": 4956480,
-        "blancos": 86150,
-        "nulos": 156282
+        "validos": 5496421,
+        "total": 5782513,
+        "blancos": 101262,
+        "nulos": 184830
       },
       "v4": {
         "lula": {
-          "votos": 3624222,
-          "pct": 62.69
+          "votos": 3651363,
+          "pct": 63.16
         },
         "flavio": {
-          "votos": 1835267,
-          "pct": 31.75
+          "votos": 1813687,
+          "pct": 31.37
         },
         "otros": {
-          "votos": 321419,
-          "pct": 5.56
+          "votos": 315859,
+          "pct": 5.46
         }
       }
     },
     {
       "uf": "PA",
       "nombre": "Pará",
-      "escrutado": 92.63,
+      "escrutado": 101.51,
       "electores_habilitados": 6143761,
       "crudo": {
         "lula": {
-          "votos": 2140089,
-          "pct": 48.69
+          "votos": 2390916,
+          "pct": 49.73
         },
         "flavio": {
-          "votos": 2001108,
-          "pct": 45.53
+          "votos": 2146717,
+          "pct": 44.65
         },
         "otros": {
-          "votos": 254040,
-          "pct": 5.78
+          "votos": 270274,
+          "pct": 5.62
         },
-        "validos": 4395237,
-        "total": 4579581,
-        "blancos": 50455,
-        "nulos": 133889
+        "validos": 4807907,
+        "total": 5008842,
+        "blancos": 53816,
+        "nulos": 147119
       },
       "v4": {
         "lula": {
-          "votos": 2400208,
-          "pct": 49.61
+          "votos": 2417157,
+          "pct": 49.96
         },
         "flavio": {
-          "votos": 2164914,
-          "pct": 44.75
+          "votos": 2150466,
+          "pct": 44.45
         },
         "otros": {
-          "votos": 272588,
-          "pct": 5.63
+          "votos": 270087,
+          "pct": 5.58
         }
       }
     },
     {
       "uf": "SC",
       "nombre": "Santa Catarina",
-      "escrutado": 96.33,
+      "escrutado": 96.86,
       "electores_habilitados": 5657262,
       "crudo": {
         "lula": {
-          "votos": 1090087,
+          "votos": 1099705,
           "pct": 25.03
         },
         "flavio": {
-          "votos": 2902522,
+          "votos": 2927603,
           "pct": 66.63
         },
         "otros": {
-          "votos": 363358,
+          "votos": 366221,
           "pct": 8.34
         },
-        "validos": 4355967,
-        "total": 4498373,
-        "blancos": 66734,
-        "nulos": 75672
+        "validos": 4393529,
+        "total": 4537153,
+        "blancos": 67298,
+        "nulos": 76326
       },
       "v4": {
         "lula": {
-          "votos": 1156614,
-          "pct": 25.07
+          "votos": 1156434,
+          "pct": 25.06
         },
         "flavio": {
-          "votos": 3073706,
-          "pct": 66.61
+          "votos": 3074077,
+          "pct": 66.62
         },
         "otros": {
-          "votos": 384027,
+          "votos": 383836,
           "pct": 8.32
         }
       }
@@ -421,151 +421,151 @@
     {
       "uf": "MA",
       "nombre": "Maranhão",
-      "escrutado": 88.87,
+      "escrutado": 100.06,
       "electores_habilitados": 5181468,
       "crudo": {
         "lula": {
-          "votos": 2202748,
-          "pct": 63.01
+          "votos": 2508791,
+          "pct": 63.74
         },
         "flavio": {
-          "votos": 1110600,
-          "pct": 31.77
+          "votos": 1224095,
+          "pct": 31.1
         },
         "otros": {
-          "votos": 182691,
-          "pct": 5.23
+          "votos": 202856,
+          "pct": 5.15
         },
-        "validos": 3496039,
-        "total": 3624538,
-        "blancos": 40365,
-        "nulos": 88134
+        "validos": 3935742,
+        "total": 4082264,
+        "blancos": 45548,
+        "nulos": 100974
       },
       "v4": {
         "lula": {
-          "votos": 2557681,
-          "pct": 63.3
+          "votos": 2572574,
+          "pct": 63.66
         },
         "flavio": {
-          "votos": 1270891,
-          "pct": 31.45
+          "votos": 1257173,
+          "pct": 31.11
         },
         "otros": {
-          "votos": 212235,
-          "pct": 5.25
+          "votos": 211060,
+          "pct": 5.22
         }
       }
     },
     {
       "uf": "GO",
       "nombre": "Goiás",
-      "escrutado": 92.63,
+      "escrutado": 95.08,
       "electores_habilitados": 5080590,
       "crudo": {
         "lula": {
-          "votos": 1092521,
-          "pct": 30.76
+          "votos": 1128658,
+          "pct": 30.96
         },
         "flavio": {
-          "votos": 1910263,
-          "pct": 53.78
+          "votos": 1954216,
+          "pct": 53.61
         },
         "otros": {
-          "votos": 548958,
-          "pct": 15.46
+          "votos": 562523,
+          "pct": 15.43
         },
-        "validos": 3551742,
-        "total": 3684766,
-        "blancos": 42644,
-        "nulos": 90380
+        "validos": 3645397,
+        "total": 3782138,
+        "blancos": 43729,
+        "nulos": 93012
       },
       "v4": {
         "lula": {
-          "votos": 1236534,
-          "pct": 31.09
+          "votos": 1238486,
+          "pct": 31.13
         },
         "flavio": {
-          "votos": 2128269,
-          "pct": 53.5
+          "votos": 2127457,
+          "pct": 53.48
         },
         "otros": {
-          "votos": 613019,
-          "pct": 15.41
+          "votos": 611879,
+          "pct": 15.38
         }
       }
     },
     {
       "uf": "PB",
       "nombre": "Paraíba",
-      "escrutado": 95.81,
+      "escrutado": 96.85,
       "electores_habilitados": 3248531,
       "crudo": {
         "lula": {
-          "votos": 1469188,
-          "pct": 60.93
+          "votos": 1486783,
+          "pct": 61.0
         },
         "flavio": {
-          "votos": 805218,
-          "pct": 33.39
+          "votos": 812737,
+          "pct": 33.34
         },
         "otros": {
-          "votos": 136821,
-          "pct": 5.67
+          "votos": 137991,
+          "pct": 5.66
         },
-        "validos": 2411227,
-        "total": 2574000,
-        "blancos": 50333,
-        "nulos": 112440
+        "validos": 2437511,
+        "total": 2602099,
+        "blancos": 50869,
+        "nulos": 113719
       },
       "v4": {
         "lula": {
-          "votos": 1644961,
+          "votos": 1644928,
           "pct": 61.23
         },
         "flavio": {
-          "votos": 890253,
+          "votos": 890350,
           "pct": 33.14
         },
         "otros": {
-          "votos": 151445,
-          "pct": 5.64
+          "votos": 151382,
+          "pct": 5.63
         }
       }
     },
     {
       "uf": "ES",
       "nombre": "Espírito Santo",
-      "escrutado": 96.86,
+      "escrutado": 97.03,
       "electores_habilitados": 2991650,
       "crudo": {
         "lula": {
-          "votos": 829627,
-          "pct": 37.75
+          "votos": 830772,
+          "pct": 37.73
         },
         "flavio": {
-          "votos": 1203451,
-          "pct": 54.76
+          "votos": 1205832,
+          "pct": 54.77
         },
         "otros": {
-          "votos": 164782,
+          "votos": 165071,
           "pct": 7.5
         },
-        "validos": 2197860,
-        "total": 2296382,
-        "blancos": 42246,
-        "nulos": 56276
+        "validos": 2201675,
+        "total": 2300343,
+        "blancos": 42300,
+        "nulos": 56368
       },
       "v4": {
         "lula": {
-          "votos": 895622,
+          "votos": 895555,
           "pct": 37.78
         },
         "flavio": {
-          "votos": 1297596,
-          "pct": 54.73
+          "votos": 1297667,
+          "pct": 54.74
         },
         "otros": {
-          "votos": 177511,
+          "votos": 177509,
           "pct": 7.49
         }
       }
@@ -573,151 +573,151 @@
     {
       "uf": "AM",
       "nombre": "Amazonas",
-      "escrutado": 92.48,
+      "escrutado": 98.6,
       "electores_habilitados": 2798611,
       "crudo": {
         "lula": {
-          "votos": 938584,
-          "pct": 46.76
+          "votos": 1025119,
+          "pct": 47.89
         },
         "flavio": {
-          "votos": 927846,
-          "pct": 46.23
+          "votos": 969600,
+          "pct": 45.29
         },
         "otros": {
-          "votos": 140672,
-          "pct": 7.01
+          "votos": 146050,
+          "pct": 6.82
         },
-        "validos": 2007102,
-        "total": 2067005,
-        "blancos": 23562,
-        "nulos": 36341
+        "validos": 2140769,
+        "total": 2203813,
+        "blancos": 24297,
+        "nulos": 38747
       },
       "v4": {
         "lula": {
-          "votos": 1060243,
-          "pct": 47.44
+          "votos": 1066088,
+          "pct": 47.7
         },
         "flavio": {
-          "votos": 1020568,
-          "pct": 45.66
+          "votos": 1015691,
+          "pct": 45.44
         },
         "otros": {
-          "votos": 154269,
-          "pct": 6.9
+          "votos": 153301,
+          "pct": 6.86
         }
       }
     },
     {
       "uf": "PI",
       "nombre": "Piauí",
-      "escrutado": 90.82,
+      "escrutado": 97.6,
       "electores_habilitados": 2704758,
       "crudo": {
         "lula": {
-          "votos": 1361873,
-          "pct": 70.32
+          "votos": 1471675,
+          "pct": 70.71
         },
         "flavio": {
-          "votos": 476897,
-          "pct": 24.63
+          "votos": 506036,
+          "pct": 24.31
         },
         "otros": {
-          "votos": 97797,
-          "pct": 5.05
+          "votos": 103521,
+          "pct": 4.97
         },
-        "validos": 1936567,
-        "total": 2021983,
-        "blancos": 25852,
-        "nulos": 59564
+        "validos": 2081232,
+        "total": 2172913,
+        "blancos": 27660,
+        "nulos": 64021
       },
       "v4": {
         "lula": {
-          "votos": 1570148,
-          "pct": 70.53
+          "votos": 1578440,
+          "pct": 70.9
         },
         "flavio": {
-          "votos": 544737,
-          "pct": 24.47
+          "votos": 537625,
+          "pct": 24.15
         },
         "otros": {
-          "votos": 111394,
-          "pct": 5.0
+          "votos": 110214,
+          "pct": 4.95
         }
       }
     },
     {
       "uf": "RN",
       "nombre": "Rio Grande do Norte",
-      "escrutado": 91.69,
+      "escrutado": 96.43,
       "electores_habilitados": 2659825,
       "crudo": {
         "lula": {
-          "votos": 1135041,
+          "votos": 1193534,
           "pct": 59.54
         },
         "flavio": {
-          "votos": 665778,
-          "pct": 34.92
+          "votos": 700621,
+          "pct": 34.95
         },
         "otros": {
-          "votos": 105675,
-          "pct": 5.54
+          "votos": 110551,
+          "pct": 5.51
         },
-        "validos": 1906494,
-        "total": 1997166,
-        "blancos": 30468,
-        "nulos": 60204
+        "validos": 2004706,
+        "total": 2100255,
+        "blancos": 32053,
+        "nulos": 63496
       },
       "v4": {
         "lula": {
-          "votos": 1300852,
-          "pct": 59.72
+          "votos": 1301859,
+          "pct": 59.77
         },
         "flavio": {
-          "votos": 757391,
-          "pct": 34.77
+          "votos": 756999,
+          "pct": 34.76
         },
         "otros": {
-          "votos": 119841,
-          "pct": 5.5
+          "votos": 119227,
+          "pct": 5.47
         }
       }
     },
     {
       "uf": "MT",
       "nombre": "Mato Grosso",
-      "escrutado": 96.37,
+      "escrutado": 97.92,
       "electores_habilitados": 2633475,
       "crudo": {
         "lula": {
-          "votos": 549181,
-          "pct": 29.01
+          "votos": 560491,
+          "pct": 29.14
         },
         "flavio": {
-          "votos": 1235588,
-          "pct": 65.26
+          "votos": 1253318,
+          "pct": 65.15
         },
         "otros": {
-          "votos": 108514,
-          "pct": 5.73
+          "votos": 109855,
+          "pct": 5.71
         },
-        "validos": 1893283,
-        "total": 1948888,
-        "blancos": 19785,
-        "nulos": 35820
+        "validos": 1923664,
+        "total": 1980239,
+        "blancos": 20086,
+        "nulos": 36489
       },
       "v4": {
         "lula": {
-          "votos": 591911,
-          "pct": 29.32
+          "votos": 592454,
+          "pct": 29.34
         },
         "flavio": {
-          "votos": 1311495,
-          "pct": 64.96
+          "votos": 1311043,
+          "pct": 64.94
         },
         "otros": {
-          "votos": 115556,
+          "votos": 115465,
           "pct": 5.72
         }
       }
@@ -725,38 +725,38 @@
     {
       "uf": "AL",
       "nombre": "Alagoas",
-      "escrutado": 76.38,
+      "escrutado": 99.66,
       "electores_habilitados": 2442126,
       "crudo": {
         "lula": {
-          "votos": 752633,
-          "pct": 55.33
+          "votos": 969193,
+          "pct": 54.66
         },
         "flavio": {
-          "votos": 542701,
-          "pct": 39.9
+          "votos": 718143,
+          "pct": 40.5
         },
         "otros": {
-          "votos": 64929,
-          "pct": 4.77
+          "votos": 85924,
+          "pct": 4.85
         },
-        "validos": 1360263,
-        "total": 1448206,
-        "blancos": 24441,
-        "nulos": 63502
+        "validos": 1773260,
+        "total": 1889538,
+        "blancos": 32941,
+        "nulos": 83337
       },
       "v4": {
         "lula": {
-          "votos": 1030547,
-          "pct": 54.35
+          "votos": 1035307,
+          "pct": 54.6
         },
         "flavio": {
-          "votos": 772458,
-          "pct": 40.74
+          "votos": 768897,
+          "pct": 40.55
         },
         "otros": {
-          "votos": 93014,
-          "pct": 4.91
+          "votos": 91816,
+          "pct": 4.84
         }
       }
     },
@@ -801,37 +801,37 @@
     {
       "uf": "MS",
       "nombre": "Mato Grosso do Sul",
-      "escrutado": 95.22,
+      "escrutado": 95.25,
       "electores_habilitados": 2024430,
       "crudo": {
         "lula": {
-          "votos": 499776,
-          "pct": 34.43
+          "votos": 500110,
+          "pct": 34.44
         },
         "flavio": {
-          "votos": 853427,
-          "pct": 58.79
+          "votos": 853657,
+          "pct": 58.78
         },
         "otros": {
-          "votos": 98495,
+          "votos": 98509,
           "pct": 6.78
         },
-        "validos": 1451698,
-        "total": 1501370,
-        "blancos": 20887,
-        "nulos": 28785
+        "validos": 1452276,
+        "total": 1501958,
+        "blancos": 20890,
+        "nulos": 28792
       },
       "v4": {
         "lula": {
-          "votos": 544161,
-          "pct": 34.51
+          "votos": 544245,
+          "pct": 34.52
         },
         "flavio": {
-          "votos": 926070,
+          "votos": 926002,
           "pct": 58.73
         },
         "otros": {
-          "votos": 106568,
+          "votos": 106551,
           "pct": 6.76
         }
       }
@@ -839,75 +839,75 @@
     {
       "uf": "SE",
       "nombre": "Sergipe",
-      "escrutado": 96.71,
+      "escrutado": 99.94,
       "electores_habilitados": 1740135,
       "crudo": {
         "lula": {
-          "votos": 813147,
-          "pct": 62.42
+          "votos": 843124,
+          "pct": 62.63
         },
         "flavio": {
-          "votos": 402288,
-          "pct": 30.88
+          "votos": 413675,
+          "pct": 30.73
         },
         "otros": {
-          "votos": 87285,
-          "pct": 6.7
+          "votos": 89455,
+          "pct": 6.64
         },
-        "validos": 1302720,
-        "total": 1374046,
-        "blancos": 23776,
-        "nulos": 47550
+        "validos": 1346254,
+        "total": 1419943,
+        "blancos": 24504,
+        "nulos": 49185
       },
       "v4": {
         "lula": {
-          "votos": 889020,
-          "pct": 62.57
+          "votos": 889932,
+          "pct": 62.64
         },
         "flavio": {
-          "votos": 437346,
-          "pct": 30.78
+          "votos": 436456,
+          "pct": 30.72
         },
         "otros": {
-          "votos": 94419,
-          "pct": 6.65
+          "votos": 94397,
+          "pct": 6.64
         }
       }
     },
     {
       "uf": "RO",
       "nombre": "Rondônia",
-      "escrutado": 99.53,
+      "escrutado": 99.94,
       "electores_habilitados": 1265893,
       "crudo": {
         "lula": {
-          "votos": 240038,
+          "votos": 240978,
           "pct": 25.86
         },
         "flavio": {
-          "votos": 625751,
-          "pct": 67.42
+          "votos": 628403,
+          "pct": 67.43
         },
         "otros": {
-          "votos": 62347,
+          "votos": 62587,
           "pct": 6.72
         },
-        "validos": 928136,
-        "total": 950275,
-        "blancos": 9515,
-        "nulos": 12624
+        "validos": 931968,
+        "total": 954197,
+        "blancos": 9546,
+        "nulos": 12683
       },
       "v4": {
         "lula": {
-          "votos": 248066,
-          "pct": 25.98
+          "votos": 248152,
+          "pct": 25.99
         },
         "flavio": {
-          "votos": 640463,
-          "pct": 67.08
+          "votos": 640364,
+          "pct": 67.07
         },
         "otros": {
-          "votos": 66249,
+          "votos": 66262,
           "pct": 6.94
         }
       }
@@ -953,151 +953,151 @@
     {
       "uf": "ZZ",
       "nombre": "Exterior",
-      "escrutado": 66.23,
+      "escrutado": 74.46,
       "electores_habilitados": 883039,
       "crudo": {
         "lula": {
-          "votos": 128362,
-          "pct": 51.71
+          "votos": 135823,
+          "pct": 48.63
         },
         "flavio": {
-          "votos": 96198,
-          "pct": 38.76
+          "votos": 117715,
+          "pct": 42.15
         },
         "otros": {
-          "votos": 23658,
-          "pct": 9.53
+          "votos": 25757,
+          "pct": 9.22
         },
-        "validos": 248218,
-        "total": 256923,
-        "blancos": 4794,
-        "nulos": 3911
+        "validos": 279295,
+        "total": 288652,
+        "blancos": 5130,
+        "nulos": 4227
       },
       "v4": {
         "lula": {
-          "votos": 183208,
-          "pct": 47.52
+          "votos": 182848,
+          "pct": 47.43
         },
         "flavio": {
-          "votos": 165196,
-          "pct": 42.85
+          "votos": 166571,
+          "pct": 43.2
         },
         "otros": {
-          "votos": 37143,
-          "pct": 9.63
+          "votos": 36127,
+          "pct": 9.37
         }
       }
     },
     {
       "uf": "AC",
       "nombre": "Acre",
-      "escrutado": 101.53,
+      "escrutado": 101.72,
       "electores_habilitados": 613742,
       "crudo": {
         "lula": {
-          "votos": 132940,
-          "pct": 28.64
+          "votos": 133302,
+          "pct": 28.66
         },
         "flavio": {
-          "votos": 299882,
-          "pct": 64.61
+          "votos": 300382,
+          "pct": 64.59
         },
         "otros": {
-          "votos": 31352,
+          "votos": 31377,
           "pct": 6.75
         },
-        "validos": 464174,
-        "total": 483188,
-        "blancos": 5547,
-        "nulos": 13467
+        "validos": 465061,
+        "total": 484105,
+        "blancos": 5555,
+        "nulos": 13489
       },
       "v4": {
         "lula": {
-          "votos": 136108,
-          "pct": 28.6
+          "votos": 136232,
+          "pct": 28.63
         },
         "flavio": {
-          "votos": 307599,
-          "pct": 64.63
+          "votos": 307491,
+          "pct": 64.61
         },
         "otros": {
-          "votos": 32210,
-          "pct": 6.77
+          "votos": 32195,
+          "pct": 6.76
         }
       }
     },
     {
       "uf": "AP",
       "nombre": "Amapá",
-      "escrutado": 97.07,
+      "escrutado": 101.13,
       "electores_habilitados": 484154,
       "crudo": {
         "lula": {
-          "votos": 198210,
-          "pct": 45.73
+          "votos": 209751,
+          "pct": 45.64
         },
         "flavio": {
-          "votos": 197869,
-          "pct": 45.65
+          "votos": 210116,
+          "pct": 45.72
         },
         "otros": {
-          "votos": 37403,
-          "pct": 8.63
+          "votos": 39738,
+          "pct": 8.65
         },
-        "validos": 433482,
-        "total": 444367,
-        "blancos": 4121,
-        "nulos": 6764
+        "validos": 459605,
+        "total": 471139,
+        "blancos": 4356,
+        "nulos": 7178
       },
       "v4": {
         "lula": {
-          "votos": 178072,
-          "pct": 45.8
+          "votos": 178738,
+          "pct": 45.97
         },
         "flavio": {
-          "votos": 177829,
-          "pct": 45.73
+          "votos": 177257,
+          "pct": 45.59
         },
         "otros": {
-          "votos": 32936,
-          "pct": 8.47
+          "votos": 32844,
+          "pct": 8.45
         }
       }
     },
     {
       "uf": "RR",
       "nombre": "Roraima",
-      "escrutado": 93.26,
+      "escrutado": 93.67,
       "electores_habilitados": 397351,
       "crudo": {
         "lula": {
-          "votos": 72361,
-          "pct": 22.61
+          "votos": 73264,
+          "pct": 22.79
         },
         "flavio": {
-          "votos": 228110,
-          "pct": 71.26
+          "votos": 228487,
+          "pct": 71.09
         },
         "otros": {
-          "votos": 19624,
-          "pct": 6.13
+          "votos": 19659,
+          "pct": 6.12
         },
-        "validos": 320095,
-        "total": 327181,
-        "blancos": 2588,
-        "nulos": 4498
+        "validos": 321410,
+        "total": 328534,
+        "blancos": 2594,
+        "nulos": 4530
       },
       "v4": {
         "lula": {
-          "votos": 74561,
-          "pct": 22.52
+          "votos": 74931,
+          "pct": 22.64
         },
         "flavio": {
-          "votos": 236152,
-          "pct": 71.34
+          "votos": 235787,
+          "pct": 71.23
         },
         "otros": {
-          "votos": 20303,
+          "votos": 20298,
           "pct": 6.13
         }
       }

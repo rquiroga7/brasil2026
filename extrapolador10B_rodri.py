@@ -471,8 +471,10 @@ def _curva_proyeccion(x0, y0, fin, pendiente):
   return xs, ys
 
 
-def graficar_simulacion_swing():
-  """% CONTADO (raw) vs % escrutado + proyección no lineal al final swing (100%)."""
+def graficar_simulacion(metodo, finales, bandas=None, archivo=None):
+  """% CONTADO (raw) vs % escrutado + proyección no lineal al final del método."""
+  bandas = bandas or {}
+  archivo = archivo or f"simulacion_{metodo}_2026.png"
   if not os.path.exists(ARCHIVO_HISTORICO):
     return
   df = pd.read_csv(ARCHIVO_HISTORICO)
@@ -480,16 +482,6 @@ def graficar_simulacion_swing():
   if crudo.empty:
     return
   x = pd.to_numeric(crudo["escrutado_pct"], errors="coerce")
-
-  finales, bandas = {}, {}
-  if os.path.exists(ARCHIVO_HIST_SWING):
-    sw = pd.read_csv(ARCHIVO_HIST_SWING)
-    if not sw.empty:
-      last = sw.iloc[-1]
-      finales = {"lula": last.get("lula_pct"), "flavio": last.get("flavio_pct"),
-                 "otros": last.get("otros_pct")}
-      bandas = {"lula": (last.get("lula_p5"), last.get("lula_p95")),
-                "flavio": (last.get("flavio_p5"), last.get("flavio_p95"))}
 
   fig, ax = plt.subplots(figsize=(10, 7.5))
   series = [("lula", "lula", "Lula", "#E11B22"),
@@ -531,7 +523,7 @@ def graficar_simulacion_swing():
   ax.set_yticks([0, 25, 50, 65])
   ax.set_xlabel("% escrutado", fontsize=10)
   ax.set_ylabel("Porcentaje (%)", fontsize=10)
-  ax.set_title("Simulación: % contado (raw) y proyección al final swing a 100% "
+  ax.set_title(f"Simulación {metodo.upper()}: % contado (raw) y proyección a 100% "
                f"(última: {x.iloc[-1]:.2f}% contado)", fontsize=11, fontweight="bold")
   ax.grid(True, linestyle="--", alpha=0.5)
 
@@ -566,9 +558,22 @@ def graficar_simulacion_swing():
               title="Proyección a 100%", title_fontsize=9)
 
   fig.tight_layout()
-  fig.savefig(ARCHIVO_IMG_SWING, dpi=120, bbox_inches="tight")
+  fig.savefig(archivo, dpi=120, bbox_inches="tight")
   plt.close(fig)
-  print(f"[i] Simulación swing: {ARCHIVO_IMG_SWING}")
+  print(f"[i] Simulación {metodo}: {archivo}")
+
+
+def graficar_simulacion_swing():
+  finales, bandas = {}, {}
+  if os.path.exists(ARCHIVO_HIST_SWING):
+    sw = pd.read_csv(ARCHIVO_HIST_SWING)
+    if not sw.empty:
+      last = sw.iloc[-1]
+      finales = {"lula": last.get("lula_pct"), "flavio": last.get("flavio_pct"),
+                 "otros": last.get("otros_pct")}
+      bandas = {"lula": (last.get("lula_p5"), last.get("lula_p95")),
+                "flavio": (last.get("flavio_p5"), last.get("flavio_p95"))}
+  graficar_simulacion("v2", finales, bandas, ARCHIVO_IMG_SWING)
 
 
 def main():
