@@ -93,10 +93,12 @@ def cargar_zonas_2022():
     col_flav = next((c for c in df.columns if c.startswith("22_")), None)
     if not col_lula or not col_flav:
         return {}
+    cand_cols = [c for c in df.columns if c[:2].isdigit()]
     out = {}
     for _, r in df.iterrows():
-        valid = max(0.0, num(r.get("votos_totales")) - num(r.get("votos_blancos"))
-                    - num(r.get("votos_nulos")))
+        # Votos válidos = suma de votos nominales por candidato. (El campo
+        # "votos_totales" del detalhe 2022 quedó mal parseado: ~mitad del real.)
+        valid = sum(num(r.get(c)) for c in cand_cols)
         if valid <= 0:
             continue
         l = num(r.get(col_lula))

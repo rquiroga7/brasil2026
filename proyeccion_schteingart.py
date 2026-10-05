@@ -216,6 +216,10 @@ def proyectar():
         elec_uf[uf] = elec_uf.get(uf, 0.0) + float(r.get("electores") or 0)
 
     escrutado_nat = round(res["contado"] * 100, 2)
+    # Gate del modelo original (ProyeccionEnVivo): solo se muestra la proyección
+    # con >=2% de votos esperados contados y >=20 estados con datos; si no, se
+    # muestra el conteo crudo.
+    ok = (res["contado"] >= 0.02) and (res["n_uf"] >= 20)
 
     estados = []
     for uf, vec in est_votos.items():
@@ -227,20 +231,35 @@ def proyectar():
         cd = crudo_uf.get(uf, {"l": 0.0, "f": 0.0, "o": 0.0, "valid": 0.0,
                                "total": 0.0, "blancos": 0.0, "nulos": 0.0})
         esc = _pct(cd["total"], max(total, 1.0))  # aproximado
+        crudo_blk = _bloque_crudo(cd)
+        if ok:
+            scht_blk = _bloque(vec[0], vec[1], vec[2:].sum(), total)
+        else:
+            scht_blk = {"lula": crudo_blk["lula"], "flavio": crudo_blk["flavio"],
+                        "otros": crudo_blk["otros"]}
         estados.append({
             "uf": uf, "nombre": nombre, "escrutado": esc,
             "electores_habilitados": int(elec_uf.get(uf, 0)),
-            "crudo": _bloque_crudo(cd),
-            "schteingart": _bloque(vec[0], vec[1], vec[2:].sum(), total),
+            "crudo": crudo_blk,
+            "schteingart": scht_blk,
         })
     estados.sort(key=lambda e: -e["electores_habilitados"])
+
+    crudo_nac_blk = _bloque_crudo(crudo_nat)
+    if ok:
+        nac_scht = _bloque(tot[0], tot[1], tot[2:].sum(), tot.sum())
+    else:
+        nac_scht = {"lula": crudo_nac_blk["lula"], "flavio": crudo_nac_blk["flavio"],
+                    "otros": crudo_nac_blk["otros"]}
 
     return {
         "actualizado": datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S"),
         "metodo": "schteingart",
+        "ok": bool(ok),
+        "n_uf": int(res["n_uf"]),
         "escrutado_pct": escrutado_nat,
-        "nacional": {"escrutado": escrutado_nat, "crudo": _bloque_crudo(crudo_nat),
-                     "schteingart": _bloque(tot[0], tot[1], tot[2:].sum(), tot.sum())},
+        "nacional": {"escrutado": escrutado_nat, "crudo": crudo_nac_blk,
+                     "schteingart": nac_scht},
         "estados": estados,
     }
 
