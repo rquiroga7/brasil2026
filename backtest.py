@@ -1,24 +1,26 @@
 # -*- coding: utf-8 -*-
 """
-backtest.py — Compara métodos de proyección, robusto al sesgo de muestreo.
+backtest.py — Compara métodos de proyección (con caché).
 
-Dos análisis:
-  A) Error NACIONAL por % escrutado, promediado sobre 3 raspados independientes
-     del mismo escrutinio (main, maquinalabo, maquinarafa).
-  B) Error por ESTADO, agrupado por el % escrutado DE CADA ESTADO. Así se evita
-     el sesgo de que a un % nacional bajo unos estados estén más muestreados que
-     otros. Se promedia sobre estados y sobre los 3 raspados.
+Fase 1 (una vez): muestrea ~N_SNAPS instantáneas por raspado y las guarda en
+'backtest_snapshots/' (+ manifest.json).
+Fase 2 (por método): proyecta cada instantánea y guarda resultados por grupo en
+'backtest_resultados/<grupo>.json'. Si ya existen, se reutilizan.
+Fase 3: agrupa errores por % escrutado (nacional y por estado) y grafica.
 
-Genera backtest_metodos_2026.png (panel A) y backtest_estados_2026.png (panel B).
+Cambiar solo v4 -> borrar 'backtest_resultados/v4.json' (o pasar --recalcular v4)
+y volver a correr: no re-muestrea ni re-proyecta los demás métodos.
 """
 
 import os
 import sys
 import csv
 import io
+import json
 import tempfile
 import contextlib
-from collections import OrderedDict, defaultdict
+import argparse
+from collections import OrderedDict
 
 import numpy as np
 
@@ -38,9 +40,12 @@ import proyeccion_v4 as v4
 ARCHIVOS = ["escrutinio_zonas_2026.csv",
             "escrutinio_zonas_2026maquinalabo.csv",
             "escrutinio_zonas_2026maquinarafa.csv"]
-OBJETIVOS_NAC = [1, 2.5, 5, 10, 20, 35, 50, 100]
-BINS_ESTADO = [1, 2.5, 5, 10, 20, 35, 50, 100]
-N_SNAPS_ESTADO = 8
+OBJETIVOS_NAC = [5, 10, 20, 35, 50, 75, 100]
+BINS_ESTADO = [5, 10, 20, 35, 50, 75, 100]
+N_SNAPS = 25
+SNAP_DIR = "backtest_snapshots"
+RES_DIR = "backtest_resultados"
+GRUPOS = ["sw", "v4", "scht"]   # sw -> crudo,v1,v2 ; scht -> scht,scht_ng
 
 METODOS = OrderedDict([
     ("crudo", ("#9AA0A6", "Conteo crudo TSE (muestra sesgada)")),
@@ -48,7 +53,7 @@ METODOS = OrderedDict([
     ("v2",  ("#4C8DFF", "v2 Swing uniforme NACIONAL: 2022 + swing nacional")),
     ("scht", ("#2E7D32", "Schteingart (con gate): crudo hasta estar listo")),
     ("scht_ng", ("#8B5CF6", "Schteingart SIN gate: proyecta siempre")),
-    ("v4",  ("#B8860B", "v4 Swing por ESTADO: 2022 + swing del estado")),
+    ("v4",  ("#B8860B", "v4 Swing por ESTADO (encogido a nacional si falta dato)")),
 ])
 
 sw.N_SIM = 5
@@ -90,72 +95,6 @@ def escribir(rows, path):
         w.writerows(rows)
 
 
-def proyectar(path):
-    e1.ARCHIVO_VIVO_2026 = path
-    e1.ARCHIVO_HISTORICO = tempfile.mktemp(suffix=".csv")
-    e1.ARCHIVO_JSON = tempfile.mktemp(suffix=".json")
-    sw.ARCHIVO_VIVO_2026 = path
-    with contextlib.redirect_stdout(io.StringIO()):
-        try:
-            r2 = sw.proyectar()
-        except Exception:
-            r2 = None
-        try:
-            r4 = v4.proyectar_v4()
-        except Exception:
-            r4 = None
-        try:
-            r5 = sc.proyectar()
-        except Exception:
-            r5 = None
-    # nacional
-    nac = {}
-    if r2:
-        c = r2.get("nacional", {}).get("crudo")
-        if c:
-            nac["crudo"] = (c["lula"]["pct"], c["flavio"]["pct"])
-        b = r2.get("nacional", {}).get("v1")
-        if b:
-            nac["v1"] = (b["lula"]["pct"], b["flavio"]["pct"])
-        b = r2.get("nacional", {}).get("swing")
-        if b:
-            nac["v2"] = (b["lula"]["pct"], b["flavio"]["pct"])
-    if r4 and r4.get("nacional", {}).get("v4"):
-        b = r4["nacional"]["v4"]
-        nac["v4"] = (b["lula"]["pct"], b["flavio"]["pct"])
-    if r5 and r5.get("nacional", {}).get("schteingart"):
-        b = r5["nacional"]["schteingart"]
-        nac["scht"] = (b["lula"]["pct"], b["flavio"]["pct"])
-    if r5 and r5.get("nacional", {}).get("schteingart_nogate"):
-        b = r5["nacional"]["schteingart_nogate"]
-        nac["scht_ng"] = (b["lula"]["pct"], b["flavio"]["pct"])
-    # estados
-    est = {}
-    if r2:
-        for e in r2.get("estados", []):
-            uf = e["uf"]
-            est.setdefault(uf, {})["esc"] = e.get("escrutado")
-            if e.get("crudo"):
-                est[uf]["crudo"] = (e["crudo"]["lula"]["pct"], e["crudo"]["flavio"]["pct"])
-            if e.get("v1"):
-                est[uf]["v1"] = (e["v1"]["lula"]["pct"], e["v1"]["flavio"]["pct"])
-            if e.get("swing"):
-                est[uf]["v2"] = (e["swing"]["lula"]["pct"], e["swing"]["flavio"]["pct"])
-    if r4:
-        for e in r4.get("estados", []):
-            if e.get("v4"):
-                est.setdefault(e["uf"], {})["v4"] = (e["v4"]["lula"]["pct"], e["v4"]["flavio"]["pct"])
-    if r5:
-        for e in r5.get("estados", []):
-            if e.get("schteingart"):
-                est.setdefault(e["uf"], {})["scht"] = (e["schteingart"]["lula"]["pct"],
-                                                       e["schteingart"]["flavio"]["pct"])
-            if e.get("schteingart_nogate"):
-                est.setdefault(e["uf"], {})["scht_ng"] = (e["schteingart_nogate"]["lula"]["pct"],
-                                                          e["schteingart_nogate"]["flavio"]["pct"])
-    return nac, est
-
-
 def total_peso():
     df_base = e1.cargar_linea_base_2022()
     df_vivo = sw.cargar_vivo_2026()
@@ -171,58 +110,12 @@ def total_peso():
     return tp
 
 
-def err(a, b):
-    return abs(a[0] - b[0]) + abs(a[1] - b[1])
-
-
-def parte_a(tp, final_nac):
-    print("\n=== A) Error nacional promedio sobre 3 raspados ===")
-    acum = {m: {o: [] for o in OBJETIVOS_NAC} for m in METODOS}
-    for archivo in ARCHIVOS:
-        rows = cargar(archivo)
-        rows.sort(key=lambda r: r["hora_local"])
-        by_time = OrderedDict()
-        for r in rows:
-            by_time.setdefault(r["hora_local"], []).append(r)
-        ultimo = {}; suma = 0.0; ti = 0
-        for t, ft in by_time.items():
-            for r in ft:
-                k = (norm(r["codigo_municipio"]), norm(r["zona_electoral"]))
-                v = int(float(r["votos_totales"] or 0))
-                old = ultimo.get(k)
-                if old is not None:
-                    suma -= old[0]
-                ultimo[k] = (v, r); suma += v
-            esc = suma / tp * 100 if tp else 0
-            while ti < len(OBJETIVOS_NAC) and esc >= OBJETIVOS_NAC[ti]:
-                snap = tempfile.mktemp(suffix=".csv")
-                escribir([rr for _, rr in ultimo.values()], snap)
-                nac, _ = proyectar(snap)
-                for m in METODOS:
-                    if m in nac:
-                        acum[m][OBJETIVOS_NAC[ti]].append(err(nac[m], final_nac))
-                ti += 1
-            if ti >= len(OBJETIVOS_NAC):
-                break
-        print(f"  [{archivo}] listo", flush=True)
-
-    cols = list(METODOS.keys())
-    print(f'{"%esc":>6} | ' + " ".join(f'{m:>7}' for m in cols))
-    for o in OBJETIVOS_NAC:
-        fila = " ".join(f"{np.mean(acum[m][o]):7.2f}" if acum[m][o] else "    n/a" for m in cols)
-        print(f"{o:6.1f} | {fila}")
-    print("\nError medio (todos los cortes):")
-    medias = {}
-    for m in cols:
-        vals = [x for o in OBJETIVOS_NAC for x in acum[m][o]]
-        medias[m] = np.mean(vals) if vals else float("nan")
-        print(f"  {m}: {medias[m]:.2f}   — {METODOS[m][1]}")
-    return acum, medias
-
-
-def parte_b(final_est):
-    print("\n=== B) Error por estado, agrupado por % escrutado del propio estado ===")
-    acum = {m: {b: [] for b in BINS_ESTADO} for m in METODOS}
+# --------------------------------------------------------------------------
+# Fase 1: muestrear instantáneas
+# --------------------------------------------------------------------------
+def generar_snapshots(tp):
+    os.makedirs(SNAP_DIR, exist_ok=True)
+    manifest = []
     for archivo in ARCHIVOS:
         rows = cargar(archivo)
         rows.sort(key=lambda r: r["hora_local"])
@@ -230,34 +123,120 @@ def parte_b(final_est):
         for r in rows:
             by_time.setdefault(r["hora_local"], []).append(r)
         tiempos = list(by_time.keys())
-        idxs = np.unique(np.linspace(0, len(tiempos) - 1, N_SNAPS_ESTADO).astype(int))
-        for i in idxs:
-            filas = [r for r in rows if r["hora_local"] <= tiempos[i]]
-            snap = tempfile.mktemp(suffix=".csv")
-            escribir(filas, snap)
-            _, est = proyectar(snap)
-            for uf, d in est.items():
-                if uf == "ZZ" or "esc" not in d or d["esc"] is None:
-                    continue
-                fin = final_est.get(uf)
-                if not fin:
-                    continue
-                b = min(BINS_ESTADO, key=lambda x: abs(x - d["esc"]))
-                for m in METODOS:
-                    if m in d:
-                        acum[m][b].append(err(d[m], fin))
-        print(f"  [{archivo}] listo", flush=True)
+        idxs = set(np.unique(np.linspace(0, len(tiempos) - 1, N_SNAPS).astype(int)).tolist())
+        ultimo = {}
+        suma = 0.0
+        base = os.path.splitext(os.path.basename(archivo))[0]
+        for pos, t in enumerate(tiempos):
+            for r in by_time[t]:
+                k = (norm(r["codigo_municipio"]), norm(r["zona_electoral"]))
+                v = int(float(r["votos_totales"] or 0))
+                old = ultimo.get(k)
+                if old is not None:
+                    suma -= old[0]
+                ultimo[k] = (v, r)
+                suma += v
+            if pos not in idxs:
+                continue
+            esc = suma / tp * 100 if tp else 0
+            path = os.path.join(SNAP_DIR, f"{base}_{pos}.csv")
+            escribir([rr for _, rr in ultimo.values()], path)
+            manifest.append({"archivo": archivo, "path": path, "esc_nac": esc})
+        print(f"  [{archivo}] {len(idxs)} instantáneas", flush=True)
+    json.dump(manifest, open(os.path.join(SNAP_DIR, "manifest.json"), "w"))
+    return manifest
 
-    cols = list(METODOS.keys())
-    print(f'{"%esc UF":>7} | ' + " ".join(f'{m:>7}' for m in cols))
-    for b in BINS_ESTADO:
-        fila = " ".join(f"{np.mean(acum[m][b]):7.2f}" if acum[m][b] else "    n/a" for m in cols)
-        print(f"{b:7.1f} | {fila}")
-    print("\nError medio por estado (todos los bins):")
-    for m in cols:
-        vals = [x for b in BINS_ESTADO for x in acum[m][b]]
-        print(f"  {m}: {np.mean(vals):.2f}" if vals else f"  {m}: n/a")
-    return acum
+
+# --------------------------------------------------------------------------
+# Fase 2: proyectar por grupo
+# --------------------------------------------------------------------------
+def _extract_sw(r):
+    nac, est = {}, {}
+    if r:
+        for key, tag in (("crudo", "crudo"), ("v1", "v1"), ("swing", "v2")):
+            b = r.get("nacional", {}).get(key)
+            if b:
+                nac[tag] = [b["lula"]["pct"], b["flavio"]["pct"]]
+        for e in r.get("estados", []):
+            d = est.setdefault(e["uf"], {"esc": e.get("escrutado")})
+            for key, tag in (("crudo", "crudo"), ("v1", "v1"), ("swing", "v2")):
+                if e.get(key):
+                    d[tag] = [e[key]["lula"]["pct"], e[key]["flavio"]["pct"]]
+    return nac, est
+
+
+def _extract_v4(r):
+    nac, est = {}, {}
+    if r and r.get("nacional", {}).get("v4"):
+        b = r["nacional"]["v4"]
+        nac["v4"] = [b["lula"]["pct"], b["flavio"]["pct"]]
+    if r:
+        for e in r.get("estados", []):
+            if e.get("v4"):
+                est.setdefault(e["uf"], {"esc": e.get("escrutado")})["v4"] = \
+                    [e["v4"]["lula"]["pct"], e["v4"]["flavio"]["pct"]]
+    return nac, est
+
+
+def _extract_scht(r):
+    nac, est = {}, {}
+    if r:
+        for key, tag in (("schteingart", "scht"), ("schteingart_nogate", "scht_ng")):
+            b = r.get("nacional", {}).get(key)
+            if b:
+                nac[tag] = [b["lula"]["pct"], b["flavio"]["pct"]]
+        for e in r.get("estados", []):
+            d = est.setdefault(e["uf"], {"esc": e.get("escrutado")})
+            for key, tag in (("schteingart", "scht"), ("schteingart_nogate", "scht_ng")):
+                if e.get(key):
+                    d[tag] = [e[key]["lula"]["pct"], e[key]["flavio"]["pct"]]
+    return nac, est
+
+
+def calcular_grupo(grupo, manifest):
+    res = []
+    for item in manifest:
+        path = item["path"]
+        with contextlib.redirect_stdout(io.StringIO()):
+            try:
+                # v4 y scht usan cargar_vivo_2026() de proyeccion_swing,
+                # por eso hay que fijar sw.ARCHIVO_VIVO_2026 en todos los grupos.
+                sw.ARCHIVO_VIVO_2026 = path
+                if grupo == "sw":
+                    nac, est = _extract_sw(sw.proyectar())
+                elif grupo == "v4":
+                    nac, est = _extract_v4(v4.proyectar_v4())
+                else:
+                    nac, est = _extract_scht(sc.proyectar())
+            except Exception:
+                nac, est = {}, {}
+        res.append({"nac": nac, "est": est})
+    os.makedirs(RES_DIR, exist_ok=True)
+    json.dump(res, open(os.path.join(RES_DIR, f"{grupo}.json"), "w"))
+    return res
+
+
+def cargar_o_calcular(grupo, manifest, recalcular):
+    p = os.path.join(RES_DIR, f"{grupo}.json")
+    if not recalcular and os.path.exists(p):
+        return json.load(open(p))
+    print(f"  calculando {grupo}...", flush=True)
+    return calcular_grupo(grupo, manifest)
+
+
+# --------------------------------------------------------------------------
+# Fase 3: agrupar y graficar
+# --------------------------------------------------------------------------
+def err(a, b):
+    return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+
+def _bin(esc, bins):
+    b = None
+    for x in bins:
+        if esc >= x:
+            b = x
+    return b
 
 
 def graficar(acum_a, acum_b):
@@ -269,6 +248,8 @@ def graficar(acum_a, acum_b):
             ax.plot(xs, ys, "o-", color=color, linewidth=2, label=f"{m}: {explic}")
     ax.set_xlabel("% de votos escrutados (nacional)", fontsize=10)
     ax.set_ylabel("Error |ΔLula| + |ΔFlavio| (puntos)", fontsize=10)
+    ax.set_xticks(OBJETIVOS_NAC)
+    ax.set_ylim(0, 10)
     ax.set_title("A) Error nacional por % escrutado (promedio de 3 raspados)",
                  fontsize=11, fontweight="bold")
     ax.grid(True, linestyle="--", alpha=0.5)
@@ -285,7 +266,8 @@ def graficar(acum_a, acum_b):
             ax.plot(xs, ys, "o-", color=color, linewidth=2, label=f"{m}: {explic}")
     ax.set_xlabel("% escrutado del propio estado", fontsize=10)
     ax.set_ylabel("Error |ΔLula| + |ΔFlavio| (puntos)", fontsize=10)
-    ax.set_ylim(0, 20)
+    ax.set_xticks(BINS_ESTADO)
+    ax.set_ylim(0, 10)
     ax.set_title("B) Error por estado según su propio % escrutado (prom. estados × 3 raspados)",
                  fontsize=11, fontweight="bold")
     ax.grid(True, linestyle="--", alpha=0.5)
@@ -297,17 +279,85 @@ def graficar(acum_a, acum_b):
 
 
 def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--recalcular", nargs="*", default=[],
+                    help="grupos a recalcular: sw v4 scht (por defecto, los que falten)")
+    ap.add_argument("--rehacer-snapshots", action="store_true")
+    args = ap.parse_args()
+
     tp = total_peso()
-    # final nacional y por estado desde el raspado principal (último snapshot)
-    rows = cargar(ARCHIVOS[0])
+    man_path = os.path.join(SNAP_DIR, "manifest.json")
+    if args.rehacer_snapshots or not os.path.exists(man_path):
+        print("Fase 1: muestreando instantáneas...")
+        manifest = generar_snapshots(tp)
+    else:
+        manifest = json.load(open(man_path))
+    print(f"Instantáneas: {len(manifest)}")
+
+    # referencia final
+    rows0 = cargar(ARCHIVOS[0])
     full = tempfile.mktemp(suffix=".csv")
-    escribir(rows, full)
-    nac_f, est_f = proyectar(full)
-    final_nac = nac_f["crudo"]
-    final_est = {uf: d["crudo"] for uf, d in est_f.items() if "crudo" in d}
-    print(f"Final nacional (crudo): Lula {final_nac[0]:.2f}% | Flavio {final_nac[1]:.2f}%")
-    acum_a, _ = parte_a(tp, final_nac)
-    acum_b = parte_b(final_est)
+    escribir(rows0, full)
+    sw.ARCHIVO_VIVO_2026 = full
+    with contextlib.redirect_stdout(io.StringIO()):
+        r2f = sw.proyectar()
+    final_nac = [r2f["nacional"]["crudo"]["lula"]["pct"], r2f["nacional"]["crudo"]["flavio"]["pct"]]
+    final_est = {e["uf"]: [e["crudo"]["lula"]["pct"], e["crudo"]["flavio"]["pct"]]
+                 for e in r2f.get("estados", []) if e.get("crudo")}
+    print(f"Final nacional (crudo): Lula {final_nac[0]:.2f}% | Flavio {final_nac[1]:.2f}%\n")
+
+    rec = set(args.recalcular)
+    resultados = {}
+    for g in GRUPOS:
+        resultados[g] = cargar_o_calcular(g, manifest, g in rec or not rec and not os.path.exists(os.path.join(RES_DIR, f"{g}.json")))
+
+    acum_a = {m: {o: [] for o in OBJETIVOS_NAC} for m in METODOS}
+    acum_b = {m: {b: [] for b in BINS_ESTADO} for m in METODOS}
+    for i, item in enumerate(manifest):
+        esc = item["esc_nac"]
+        b = _bin(esc, OBJETIVOS_NAC)
+        for g in GRUPOS:
+            nac = resultados[g][i]["nac"]
+            if b is not None:
+                for m, val in nac.items():
+                    acum_a[m][b].append(err(val, final_nac))
+            for uf, d in resultados[g][i]["est"].items():
+                if uf == "ZZ" or d.get("esc") is None:
+                    continue
+                fin = final_est.get(uf)
+                if not fin:
+                    continue
+                bb = _bin(d["esc"], BINS_ESTADO)
+                if bb is None:
+                    continue
+                for m, val in d.items():
+                    if m != "esc":
+                        acum_b[m][bb].append(err(val, fin))
+
+    for m in METODOS:
+        acum_a[m][100] = [0.0]
+
+    cols = list(METODOS.keys())
+    print("\n=== A) Error nacional por % escrutado (prom. 3 raspados) ===")
+    print(f'{"%esc":>6} | ' + " ".join(f'{m:>7}' for m in cols))
+    for o in OBJETIVOS_NAC:
+        fila = " ".join(f"{np.mean(acum_a[m][o]):7.2f}" if acum_a[m][o] else "    n/a" for m in cols)
+        print(f"{o:6.1f} | {fila}")
+    print("\nError medio:")
+    for m in cols:
+        vals = [x for o in OBJETIVOS_NAC for x in acum_a[m][o]]
+        print(f"  {m}: {np.mean(vals):.2f}   — {METODOS[m][1]}")
+
+    print("\n=== B) Error por estado según su propio % escrutado ===")
+    print(f'{"%esc":>6} | ' + " ".join(f'{m:>7}' for m in cols))
+    for o in BINS_ESTADO:
+        fila = " ".join(f"{np.mean(acum_b[m][o]):7.2f}" if acum_b[m][o] else "    n/a" for m in cols)
+        print(f"{o:6.1f} | {fila}")
+    print("\nError medio por estado:")
+    for m in cols:
+        vals = [x for o in BINS_ESTADO for x in acum_b[m][o]]
+        print(f"  {m}: {np.mean(vals):.2f}")
+
     graficar(acum_a, acum_b)
 
 

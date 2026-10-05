@@ -37,6 +37,7 @@ from proyeccion_v3 import _bloque, _bloque_crudo, _pct
 
 ARCHIVO_JSON_V4 = "datos_proyeccion_v4_2026.json"
 MIN_N = 5   # zonas escrutadas mínimas para usar el swing propio del estado
+T_SWING = 0.30   # % escrutado del estado a partir del cual manda su swing (antes: nacional)
 
 ESTADOS = ["ac", "al", "am", "ap", "ba", "ce", "df", "es", "go", "ma", "mg", "ms", "mt",
            "pa", "pb", "pe", "pi", "pr", "rj", "rn", "ro", "rr", "rs", "sc", "se", "sp", "to"]
@@ -122,6 +123,24 @@ def proyectar_v4():
     # --- arrays por zona base ---
     ufs = sorted(df_base["estado_uf"].unique())
     uf_idx = {u: i for i, u in enumerate(ufs)}
+
+    # escrutado por estado = votos contados / votos esperados (umbral del swing)
+    A_state = np.zeros(len(ufs))
+    for _, r in df_base.iterrows():
+        ii = uf_idx.get(r["estado_uf"], 0)
+        hab22 = int(r["electores_habilitados"])
+        try:
+            pct22 = float(r["porcentaje_asistencia"]) / 100.0
+        except (TypeError, ValueError):
+            pct22 = (int(r["electores_asistieron"]) / hab22) if hab22 else 0.0
+        A_state[ii] += electores_2026.get((r["codigo_municipio"], r["zona_electoral"]), hab22) * pct22
+    counted_state = np.zeros(len(ufs))
+    for lv in live.values():
+        uf = lv["uf"]
+        if uf in uf_idx:
+            counted_state[uf_idx[uf]] += lv["total"]
+    esc_s = counted_state / np.maximum(A_state, 1.0)
+
     n = len(df_base)
     A = np.zeros(n); H = np.zeros(n); state_idx = np.zeros(n, int)
     v4sh = np.zeros((n, 3)); live_total = np.zeros(n)
@@ -146,7 +165,12 @@ def proyectar_v4():
         p = dict22.get(clave)
         if p and p["valid"] > 0:
             pri = np.array([p["l"] / p["valid"], p["f"] / p["valid"], p["o"] / p["valid"]])
-            sw = swing_uf.get(uf, nat_swing)
+            if uf in swing_uf:
+                # encoge el swing del estado hacia el nacional según su % escrutado
+                lam = min(1.0, esc_s[state_idx[i]] / T_SWING)
+                sw = lam * swing_uf[uf] + (1.0 - lam) * nat_swing
+            else:
+                sw = nat_swing
             v4sh[i] = normalizar((pri + sw)[None, :])[0]
         else:
             if m in fb_val["municipio"]:
