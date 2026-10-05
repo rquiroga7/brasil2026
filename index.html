@@ -76,10 +76,10 @@
   <section id="tab-proj">
     <div class="toolbar">
       <div class="seg" id="seg_metodo">
-        <button data-m="scht_ng" class="active">Schteingart sin gate</button>
+        <button data-m="swing" class="active">Swing nacional (v2)</button>
+        <button data-m="scht_ng">Schteingart sin gate</button>
         <button data-m="schteingart">2026 Schteingart</button>
-        <button data-m="v4">Diferencial (v4)</button>
-        <button data-m="swing">Swing (v2)</button>
+        <button data-m="v4">Swing por estado (v4)</button>
         <button data-m="v1">Estratificado (v1)</button>
       </div>
       <span class="small" id="nota_metodo"></span>
@@ -192,7 +192,7 @@
 <script>
 const DATOS_URL = (window.DATOS_URL && window.DATOS_URL.trim()) || "datos_web.json";
 const COLORES = { lula: "#E11B22", flavio: "#4C8DFF", otros: "#8a8a8a" };
-let datos = null, metodo = "scht_ng", ordenActual = "electores", ordenCrudo = "escrutado";
+let datos = null, metodo = "swing", ordenActual = "electores", ordenCrudo = "escrutado";
 let chartRaw = null, chartExt = null, chartSwing = null;
 
 const $ = (id) => document.getElementById(id);
