@@ -17,7 +17,7 @@ padron_2026.csv
 # No se versionan en `main`. El único que se publica es `datos_web.json`
 # (pequeño) y se sube a la rama `data` por git plumbing, no a main.
 datos_web.json
-datos_proyeccion_2026.json
+datos_proyeccion_*.json
 datos_proyeccion_swing_2026.json
 grafico_vivo_2026.png
 simulacion_swing_2026.png

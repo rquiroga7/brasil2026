@@ -91,7 +91,7 @@ def proyectar_v3():
         uf = lv["uf"] or p["uf"]
         est_counted.setdefault(uf, []).append(
             (p["l"] / p["valid"], lv["l"] / lv["valid"],
-             lv["f"] / lv["valid"], lv["o"] / lv["valid"], p["valid"]))
+             lv["f"] / lv["valid"], lv["o"] / lv["valid"], lv["valid"]))
 
     def media(rows):
         if not rows:

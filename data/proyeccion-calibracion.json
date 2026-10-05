@@ -1,0 +1,126 @@
+{
+ "1": [
+  {
+   "contado": 0.019,
+   "cand": 1.15,
+   "margen": 2.21
+  },
+  {
+   "contado": 0.048,
+   "cand": 0.59,
+   "margen": 1.04
+  },
+  {
+   "contado": 0.097,
+   "cand": 0.47,
+   "margen": 0.99
+  },
+  {
+   "contado": 0.146,
+   "cand": 0.39,
+   "margen": 0.76
+  },
+  {
+   "contado": 0.195,
+   "cand": 0.3,
+   "margen": 0.66
+  },
+  {
+   "contado": 0.293,
+   "cand": 0.25,
+   "margen": 0.42
+  },
+  {
+   "contado": 0.392,
+   "cand": 0.21,
+   "margen": 0.39
+  },
+  {
+   "contado": 0.491,
+   "cand": 0.16,
+   "margen": 0.27
+  },
+  {
+   "contado": 0.591,
+   "cand": 0.12,
+   "margen": 0.21
+  },
+  {
+   "contado": 0.692,
+   "cand": 0.06,
+   "margen": 0.11
+  },
+  {
+   "contado": 0.795,
+   "cand": 0.04,
+   "margen": 0.07
+  },
+  {
+   "contado": 0.899,
+   "cand": 0.02,
+   "margen": 0.04
+  }
+ ],
+ "2": [
+  {
+   "contado": 0.018,
+   "cand": 2.49,
+   "margen": 4.9
+  },
+  {
+   "contado": 0.046,
+   "cand": 1.52,
+   "margen": 2.99
+  },
+  {
+   "contado": 0.094,
+   "cand": 0.71,
+   "margen": 1.39
+  },
+  {
+   "contado": 0.142,
+   "cand": 0.51,
+   "margen": 1.0
+  },
+  {
+   "contado": 0.19,
+   "cand": 0.34,
+   "margen": 0.67
+  },
+  {
+   "contado": 0.287,
+   "cand": 0.24,
+   "margen": 0.45
+  },
+  {
+   "contado": 0.384,
+   "cand": 0.15,
+   "margen": 0.3
+  },
+  {
+   "contado": 0.483,
+   "cand": 0.11,
+   "margen": 0.21
+  },
+  {
+   "contado": 0.584,
+   "cand": 0.1,
+   "margen": 0.19
+  },
+  {
+   "contado": 0.685,
+   "cand": 0.08,
+   "margen": 0.16
+  },
+  {
+   "contado": 0.788,
+   "cand": 0.06,
+   "margen": 0.12
+  },
+  {
+   "contado": 0.893,
+   "cand": 0.04,
+   "margen": 0.07
+  }
+ ]
+}

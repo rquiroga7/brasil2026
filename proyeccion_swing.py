@@ -138,6 +138,7 @@ def construir_live(df_vivo):
             "uf": str(r.get("estado_uf") or "").upper(),
             "total": tot, "nulos": nu, "blancos": br, "valid": valid,
             "l": l, "f": f, "o": max(0.0, valid - l - f),
+            "st": num(r.get("secoes_totalizadas")),
         }
     return live
 
@@ -147,16 +148,21 @@ def calcular_fallbacks_valid(df_vivo):
     def props(g):
         d = g["votos_totales"].sum() - g["votos_nulos"].sum() - g["votos_blancos"].sum()
         if d <= 0:
-            return {"Lula": 1/3, "Flavio": 1/3, "Otros": 1/3}
+            return None   # grupo sin votos: no generar fallback
         l = g["Lula"].sum()
         f = g["Flavio_Bolsonaro"].sum()
         return {"Lula": l/d, "Flavio": f/d, "Otros": (d - l - f)/d}
 
-    out = {"nacional": props(df_vivo), "estado": {}, "municipio": {}}
+    out = {"nacional": props(df_vivo) or {"Lula": 1/3, "Flavio": 1/3, "Otros": 1/3},
+           "estado": {}, "municipio": {}}
     for uf, g in df_vivo.groupby("estado_uf"):
-        out["estado"][uf] = props(g)
+        p = props(g)
+        if p is not None:
+            out["estado"][uf] = p
     for m, g in df_vivo.groupby("codigo_municipio"):
-        out["municipio"][m] = props(g)
+        p = props(g)
+        if p is not None:
+            out["municipio"][m] = p
     return out
 
 
@@ -173,7 +179,7 @@ def calcular_swings(live, dict22):
         uf = lv["uf"] or p["uf"]
         cur = np.array([lv["l"]/lv["valid"], lv["f"]/lv["valid"], lv["o"]/lv["valid"]])
         pri = np.array([p["l"]/p["valid"], p["f"]/p["valid"], p["o"]/p["valid"]])
-        obs.append((uf, p["valid"], cur, pri))
+        obs.append((uf, lv["valid"], cur, pri))
 
     if not obs:
         return {}, {}, np.zeros(3), np.zeros(3)

@@ -40,7 +40,7 @@ import requests
 ARCHIVO_HISTORICO = "historico_proyecciones_2026.csv"
 ARCHIVO_JSON = "datos_proyeccion_2026.json"
 ARCHIVO_JSON_SWING = "datos_proyeccion_swing_2026.json"
-ARCHIVO_JSON_V3 = "datos_proyeccion_v3_2026.json"
+ARCHIVO_JSON_SCHT = "datos_proyeccion_schteingart_2026.json"
 ARCHIVO_JSON_V4 = "datos_proyeccion_v4_2026.json"
 ARCHIVO_WEB = "datos_web.json"
 
@@ -95,7 +95,7 @@ def construir_payload():
     """Une la salida v1 (extrapolador), swing (v2) y v3 (zonas similares)."""
     v1 = _leer_json(ARCHIVO_JSON)
     swing = _leer_json(ARCHIVO_JSON_SWING)
-    v3 = _leer_json(ARCHIVO_JSON_V3)
+    scht = _leer_json(ARCHIVO_JSON_SCHT)
     v4 = _leer_json(ARCHIVO_JSON_V4)
 
     nacional = swing.get("nacional")
@@ -104,8 +104,8 @@ def construir_payload():
                     "v1": v1.get("proyectado"), "swing": v1.get("proyectado")}
 
     estados = swing.get("estados", [])
-    # Añadir v3 y v4 al nacional y a cada estado.
-    for metodo, data in (("v3", v3), ("v4", v4)):
+    # Añadir schteingart (v3) y v4 al nacional y a cada estado.
+    for metodo, data in (("schteingart", scht), ("v4", v4)):
         nat_m = (data.get("nacional") or {}).get(metodo)
         if nat_m:
             nacional[metodo] = nat_m

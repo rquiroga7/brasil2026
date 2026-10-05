@@ -36,6 +36,7 @@ if hasattr(sys.stdout, "reconfigure"):
 from extrapolador10B_rodri import (
     cargar_linea_base_2022,
     cargar_electores_habilitados_2026,
+    normalizar_codigo,
 )
 from proyeccion_swing import (
     cargar_zonas_2022,
@@ -50,6 +51,39 @@ from proyeccion_v3 import _bloque, _bloque_crudo, _pct
 ARCHIVO_JSON_V4 = "datos_proyeccion_v4_2026.json"
 MIN_N = 5          # zonas escrutadas mínimas para ajustar la recta
 B_MIN, B_MAX = 0.3, 1.7
+
+ESTADOS = ["ac", "al", "am", "ap", "ba", "ce", "df", "es", "go", "ma", "mg", "ms", "mt",
+           "pa", "pb", "pe", "pi", "pr", "rj", "rn", "ro", "rr", "rs", "sc", "se", "sp", "to"]
+URL_BU = "https://resultados.tse.jus.br/oficial/ele2026/arquivo-urna/3220/config"
+
+
+def cargar_secciones_zonas():
+    """Total de secciones por zona (TSE) desde el config de urnas. Se cachea."""
+    cache = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                         "data", "secciones_zonas_2026.json")
+    if os.path.exists(cache):
+        try:
+            return json.load(open(cache, encoding="utf-8"))
+        except (ValueError, OSError):
+            pass
+    import requests
+    H = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
+    out = {}
+    for uf in ESTADOS:
+        try:
+            cfg = requests.get(f"{URL_BU}/{uf}/{uf}-p003220-cs.json", headers=H, timeout=20).json()
+        except Exception:
+            continue
+        for a in cfg.get("abr", []):
+            for mu in a.get("mu", []):
+                for zon in mu.get("zon", []):
+                    out[f'{normalizar_codigo(mu["cd"])}|{normalizar_codigo(zon["cd"])}'] = \
+                        len(zon.get("sec", []))
+    try:
+        json.dump(out, open(cache, "w", encoding="utf-8"))
+    except OSError:
+        pass
+    return out
 
 
 def _ajustar(X, Y, W):
@@ -86,6 +120,7 @@ def proyectar_v4():
     dict22 = cargar_zonas_2022()
     live = construir_live(df_vivo)
     fb_val = calcular_fallbacks_valid(df_vivo)
+    sec_zonas = cargar_secciones_zonas()
 
     # --- zonas escrutadas por estado (2022 y 2026) ---
     est = {}
@@ -99,7 +134,14 @@ def proyectar_v4():
         d = est.setdefault(uf, {"pri": [], "cur": [], "w": []})
         d["pri"].append([p["l"] / p["valid"], p["f"] / p["valid"], p["o"] / p["valid"]])
         d["cur"].append([lv["l"] / lv["valid"], lv["f"] / lv["valid"], lv["o"] / lv["valid"]])
-        d["w"].append(p["valid"])
+        # peso = tamaño (válidos 2022) x completitud (secciones contadas / totales)
+        ts = sec_zonas.get(f"{clave[0]}|{clave[1]}", 0.0)
+        st = lv.get("st", 0.0)
+        if ts > 0:
+            comp = min(1.0, st / ts)
+        else:
+            comp = min(1.0, lv["valid"] / p["valid"]) if p["valid"] > 0 else 0.0
+        d["w"].append(p["valid"] * comp)
 
     coef = {}
     for uf, d in est.items():

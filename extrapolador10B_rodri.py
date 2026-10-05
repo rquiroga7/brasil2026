@@ -137,8 +137,8 @@ def calcular_fallbacks_jerarquicos(df_2026_actual):
     # Válidos = total - nulos - blancos (comparable con el swing v2).
     denominador = v_totales - v_nulos - v_blancos
 
-    if denominador == 0:
-      return {"Lula": 0.35, "Flavio": 0.35, "Otros": 0.30}
+    if denominador <= 0:
+      return None   # grupo sin votos escrutados: no generar fallback
 
     v_otros = denominador - v_lula - v_bols
     return {
@@ -147,11 +147,16 @@ def calcular_fallbacks_jerarquicos(df_2026_actual):
         "Otros": v_otros / denominador,
     }
 
-  dict_fallbacks["nacional"] = extraer_proporciones(df_2026_actual)
+  nat = extraer_proporciones(df_2026_actual)
+  dict_fallbacks["nacional"] = nat or {"Lula": 0.35, "Flavio": 0.35, "Otros": 0.30}
   for uf, grupo in df_2026_actual.groupby("estado_uf"):
-    dict_fallbacks["estado"][uf] = extraer_proporciones(grupo)
+    p = extraer_proporciones(grupo)
+    if p is not None:
+      dict_fallbacks["estado"][uf] = p
   for mun, grupo in df_2026_actual.groupby("codigo_municipio"):
-    dict_fallbacks["municipio"][mun] = extraer_proporciones(grupo)
+    p = extraer_proporciones(grupo)
+    if p is not None:
+      dict_fallbacks["municipio"][mun] = p
   return dict_fallbacks
 
 
