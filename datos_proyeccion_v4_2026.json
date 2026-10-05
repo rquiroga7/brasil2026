@@ -1,38 +1,38 @@
 {
-  "actualizado": "2026-10-05 01:34:50",
+  "actualizado": "2026-10-05 02:03:49",
   "metodo": "v4",
   "escrutado_pct": 97.58,
   "nacional": {
     "escrutado": 97.58,
     "crudo": {
       "lula": {
-        "votos": 52832125,
+        "votos": 52832738,
         "pct": 45.18
       },
       "flavio": {
-        "votos": 54948770,
+        "votos": 54948837,
         "pct": 46.99
       },
       "otros": {
-        "votos": 9163781,
+        "votos": 9163812,
         "pct": 7.84
       },
-      "validos": 116944676,
-      "total": 122802203,
-      "blancos": 2259445,
-      "nulos": 3598082
+      "validos": 116945387,
+      "total": 122802931,
+      "blancos": 2259447,
+      "nulos": 3598097
     },
     "v4": {
       "lula": {
-        "votos": 56535374,
+        "votos": 56535413,
         "pct": 45.13
       },
       "flavio": {
-        "votos": 58880532,
+        "votos": 58880482,
         "pct": 47.01
       },
       "otros": {
-        "votos": 9844051,
+        "votos": 9844062,
         "pct": 7.86
       }
     }
@@ -421,37 +421,37 @@
     {
       "uf": "MA",
       "nombre": "Maranhão",
-      "escrutado": 100.51,
+      "escrutado": 100.53,
       "electores_habilitados": 5181468,
       "crudo": {
         "lula": {
-          "votos": 2523006,
-          "pct": 63.82
+          "votos": 2523619,
+          "pct": 63.83
         },
         "flavio": {
-          "votos": 1226784,
+          "votos": 1226851,
           "pct": 31.03
         },
         "otros": {
-          "votos": 203331,
+          "votos": 203362,
           "pct": 5.14
         },
-        "validos": 3953121,
-        "total": 4100414,
-        "blancos": 45727,
-        "nulos": 101566
+        "validos": 3953832,
+        "total": 4101142,
+        "blancos": 45729,
+        "nulos": 101581
       },
       "v4": {
         "lula": {
-          "votos": 2578458,
+          "votos": 2578496,
           "pct": 63.81
         },
         "flavio": {
-          "votos": 1253967,
+          "votos": 1253918,
           "pct": 31.03
         },
         "otros": {
-          "votos": 208382,
+          "votos": 208393,
           "pct": 5.16
         }
       }
