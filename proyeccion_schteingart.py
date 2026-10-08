@@ -27,8 +27,10 @@ from extrapolador10B_rodri import normalizar_codigo
 from proyeccion_swing import cargar_vivo_2026, NOMBRES_UF
 from proyeccion import Proyector
 
+import rutas_datos as rd
+
 RAIZ = os.path.dirname(os.path.abspath(__file__))
-ARCHIVO_JSON = "datos_proyeccion_schteingart_2026.json"
+ARCHIVO_JSON = rd.ruta("datos_proyeccion_schteingart_2026.json")
 TURNO = 1
 URL_CONFIG = ("https://resultados.tse.jus.br/oficial/ele2026/6257"
               "/config/mun-e006257-cm.json")

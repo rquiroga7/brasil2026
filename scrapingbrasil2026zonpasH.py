@@ -11,8 +11,10 @@ if hasattr(sys.stdout, "reconfigure"):
   sys.stdout.reconfigure(encoding="utf-8", errors="replace")
   sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
+import rutas_datos as rd
+
 # === CONFIGURACIÓN OFICIAL TSE 2026 ===
-ARCHIVO_CSV = "escrutinio_zonas_2026.csv"
+ARCHIVO_CSV = rd.ruta("escrutinio_zonas_2026.csv")
 # DOMINIO CORRECTO DE LA CDN DE RESULTADOS
 DOMINIO_BASE = "https://resultados.tse.jus.br"
 ANO_ELECCION = "ele2026"

@@ -43,7 +43,9 @@ from proyeccion_swing import (
     NOMBRES_UF,
 )
 
-ARCHIVO_JSON_V3 = "datos_proyeccion_v3_2026.json"
+import rutas_datos as rd
+
+ARCHIVO_JSON_V3 = rd.ruta("datos_proyeccion_v3_2026.json")
 H_BANDA = 0.10      # ancho de banda del kernel sobre el % de Lula 2022
 MIN_NEF = 8.0       # nº efectivo de vecinos para confiar plenamente en el kNN
 

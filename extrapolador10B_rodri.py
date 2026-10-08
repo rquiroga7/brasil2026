@@ -45,15 +45,17 @@ import numpy as np
 import pandas as pd
 import requests  # noqa: F401  (se mantiene por si se amplía con descargas TSE)
 
+import rutas_datos as rd
+
 # === ARCHIVOS ===
-ARCHIVO_BASE_2022 = "padron_y_asistencia_2022.csv"
-ARCHIVO_PADRON_2026 = "padron_2026.csv"
-ARCHIVO_VIVO_2026 = "escrutinio_zonas_2026.csv"
-ARCHIVO_HISTORICO = "historico_proyecciones_2026.csv"
-ARCHIVO_IMAGEN = "grafico_vivo_2026.png"
-ARCHIVO_JSON = "datos_proyeccion_2026.json"
-ARCHIVO_HIST_SWING = "historico_swing_2026.csv"
-ARCHIVO_IMG_SWING = "simulacion_swing_2026.png"
+ARCHIVO_BASE_2022 = rd.ruta("padron_y_asistencia_2022.csv")
+ARCHIVO_PADRON_2026 = rd.ruta("padron_2026.csv")
+ARCHIVO_VIVO_2026 = rd.ruta("escrutinio_zonas_2026.csv")
+ARCHIVO_HISTORICO = rd.ruta("historico_proyecciones_2026.csv")
+ARCHIVO_IMAGEN = rd.ruta("grafico_vivo_2026.png")
+ARCHIVO_JSON = rd.ruta("datos_proyeccion_2026.json")
+ARCHIVO_HIST_SWING = rd.ruta("historico_swing_2026.csv")
+ARCHIVO_IMG_SWING = rd.ruta("simulacion_swing_2026.png")
 
 CABECERA_HISTORICO = [
     "fecha_hora", "ambito", "codigo_ambito", "tipo", "escrutado_pct",

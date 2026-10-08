@@ -38,10 +38,12 @@ CODIGO_6D      = "006257"
 PLEITO         = "3220"
 CARGO          = "0001"
 
-ARCHIVO_CSV    = "escrutinio_zonas_2026.csv"
-ARCHIVO_ESTADO = "control_versiones_2026.json"
-ARCHIVO_SERIE  = "serie_temporal_2026.csv"
-ARCHIVO_PADRON = "padron_2026.csv"
+import rutas_datos as rd
+
+ARCHIVO_CSV    = rd.ruta("escrutinio_zonas_2026.csv")
+ARCHIVO_ESTADO = rd.ruta("control_versiones_2026.json")
+ARCHIVO_SERIE  = rd.ruta("serie_temporal_2026.csv")
+ARCHIVO_PADRON = rd.ruta("padron_2026.csv")
 
 ESTADOS = ["ac", "al", "am", "ap", "ba", "ce", "df", "es", "go", "ma", "mg", "ms", "mt",
            "pa", "pb", "pe", "pi", "pr", "rj", "rn", "ro", "rr", "rs", "sc", "se", "sp",
@@ -83,23 +85,38 @@ HEADERS = {
     "Accept": "application/json",
 }
 
-# === GOBERNADOR DE TRÁFICO GLOBAL (thread-safe) ===
+# === GOBERNADOR DE TRÁFICO GLOBAL (thread-safe y adaptativo) ===
+# El TSE tolera ~100 req/s. Nos quedamos en 80 por defecto (--limite) para no
+# arriesgar throttling. Si el servidor empieza a rechazar (429/5xx/timeouts),
+# bajamos el ritmo automáticamente y lo recuperamos de a poco.
 LIMITE_REQ_POR_SEGUNDO = 80
+LIMITE_MINIMO = 10
 
 
 class _Limitador:
-    """Token bucket compartido entre hilos."""
+    """Token bucket compartido entre hilos, con penalización adaptativa."""
 
-    def __init__(self, por_segundo):
+    def __init__(self, por_segundo, minimo=LIMITE_MINIMO):
+        self.maximo = float(por_segundo)
+        self.minimo = float(minimo)
         self.por_segundo = float(por_segundo)
+        self.factor = 1.0
+        self.recuperar_en = 0.0
         self.lock = threading.Lock()
         self.tokens = float(por_segundo)
         self.ultimo = time.time()
+
+    def _recalcular(self):
+        self.por_segundo = max(self.minimo, self.maximo * self.factor)
 
     def adquirir(self):
         while True:
             with self.lock:
                 ahora = time.time()
+                if self.factor < 1.0 and ahora >= self.recuperar_en:
+                    self.factor = min(1.0, self.factor + 0.1)
+                    self._recalcular()
+                    self.recuperar_en = ahora + 5.0
                 self.tokens = min(self.por_segundo,
                                   self.tokens + (ahora - self.ultimo) * self.por_segundo)
                 self.ultimo = ahora
@@ -107,12 +124,40 @@ class _Limitador:
                     self.tokens -= 1.0
                     return
                 espera = (1.0 - self.tokens) / self.por_segundo
-            time.sleep(espera)
+            time.sleep(min(espera, 0.5))
+
+    def penalizar(self, factor=0.5, cooldown=10.0):
+        with self.lock:
+            self.factor = max(self.minimo / self.maximo, self.factor * factor)
+            self._recalcular()
+            self.tokens = min(self.tokens, self.por_segundo)
+            self.recuperar_en = time.time() + cooldown
 
 
 LIMITADOR = _Limitador(LIMITE_REQ_POR_SEGUNDO)
 
+
+def configurar_limite(por_segundo):
+    """Fija el techo de peticiones/segundo (se llama tras parsear argumentos)."""
+    with LIMITADOR.lock:
+        LIMITADOR.maximo = float(por_segundo)
+        LIMITADOR.factor = 1.0
+        LIMITADOR.por_segundo = float(por_segundo)
+        LIMITADOR.tokens = float(por_segundo)
+        LIMITADOR.ultimo = time.time()
+        LIMITADOR.recuperar_en = 0.0
+
+
 _hilo_local = threading.local()
+
+# Diagnóstico de respuestas HTTP (para detectar throttling del TSE).
+_contadores = {}
+_contadores_lock = threading.Lock()
+
+
+def _contar(clave):
+    with _contadores_lock:
+        _contadores[clave] = _contadores.get(clave, 0) + 1
 
 
 def get_session():
@@ -125,6 +170,7 @@ def get_session():
 
 
 def obtener_json(url, intentos=3):
+    """GET con reintentos y retroceso adaptativo ante throttling del TSE."""
     for i in range(intentos):
         LIMITADOR.adquirir()
         try:
@@ -133,11 +179,26 @@ def obtener_json(url, intentos=3):
                 try:
                     return r.json()
                 except ValueError:
+                    _contar("200_no_json")
                     return None
             if r.status_code == 404:
+                _contar("404")
                 return None
-            time.sleep(0.5 * (i + 1))
+            _contar(f"http_{r.status_code}")
+            if r.status_code == 429:
+                retry = r.headers.get("Retry-After")
+                try:
+                    espera = max(1.0, float(retry))
+                except (TypeError, ValueError):
+                    espera = 2.0 * (i + 1)
+                LIMITADOR.penalizar(factor=0.5, cooldown=espera + 5.0)
+                time.sleep(espera)
+            else:
+                LIMITADOR.penalizar(factor=0.7, cooldown=5.0)
+                time.sleep(0.5 * (i + 1))
         except requests.RequestException:
+            _contar("timeout_o_conexion")
+            LIMITADOR.penalizar(factor=0.7, cooldown=5.0)
             time.sleep(0.5 * (i + 1))
     return None
 
@@ -288,16 +349,28 @@ def fila_zona(uf, municipio, zona, data, votos, hora_tse_ab, n_pasada):
     return fila
 
 
-def procesar_municipio(uf, municipio, version, n_pasada):
-    """Descarga todas las zonas de un municipio. Se ejecuta en un hilo."""
-    filas = []
-    for zona in (municipio["zonas"] or [""]):
-        leido = leer_zona(uf, municipio, zona)
-        if not leido:
-            continue
-        data, votos = leido
-        filas.append(fila_zona(uf, municipio, zona, data, votos, version, n_pasada))
-    return filas
+def progreso_de_version(version):
+    """Extrae cuántas secciones/electores lleva contados un municipio.
+
+    version = "dt|ht|est". Si el municipio todavía no arrancó (0) no tiene
+    sentido pedir sus zonas: devuelven 404 o ceros y hacen perder tiempo.
+    """
+    try:
+        est = version.rsplit("|", 1)[1]
+        return int(float(str(est).replace(".", "").replace(",", ".")))
+    except (ValueError, IndexError):
+        return 0
+
+
+def procesar_zona(uf, municipio, zona, version, n_pasada):
+    """Descarga UNA zona. Una tarea por zona reparte mejor el paralelismo entre
+    municipios grandes y chicos (antes cada municipio era una tarea que pedía
+    sus zonas en serie, desperdiciando hilos)."""
+    leido = leer_zona(uf, municipio, zona)
+    if not leido:
+        return None
+    data, votos = leido
+    return fila_zona(uf, municipio, zona, data, votos, version, n_pasada)
 
 
 def registrar_snapshot(ambito):
@@ -332,7 +405,29 @@ def registrar_snapshot(ambito):
     return 1
 
 
+def registrar_log_barrido(t0, n_pasada, municipios, zonas, args):
+    """Deja registro del tiempo real de cada barrido (útil para el análisis de
+    cuándo se publicó cada resultado)."""
+    try:
+        ruta = os.path.join(rd.ruta_dir("lanzamiento"), "scrape_runs.csv")
+        nuevo = not os.path.exists(ruta)
+        with open(ruta, "a", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            if nuevo:
+                w.writerow(["inicio", "fin", "duracion_s", "n_pasada",
+                            "municipios", "zonas", "limite", "workers"])
+            w.writerow([
+                datetime.fromtimestamp(t0).strftime("%Y-%m-%d %H:%M:%S"),
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                f"{time.time() - t0:.1f}", n_pasada, municipios, zonas,
+                args.limite, args.workers,
+            ])
+    except OSError:
+        pass
+
+
 def realizar_barrido(municipios, estado, args, n_pasada, deadline=None):
+    t0 = time.time()
     print(f"\n[+] Ciclo N° {n_pasada} iniciado: {datetime.now().strftime('%H:%M:%S')}")
     estados = [args.uf] if args.uf else ESTADOS
 
@@ -346,12 +441,17 @@ def realizar_barrido(municipios, estado, args, n_pasada, deadline=None):
 
     # 1) Recolectar TODAS las tareas (de todos los estados) antes de descargar,
     #    para que los estados grandes (SP, RJ, ...) no queden para el final.
+    # 1a) El avance por municipio (abrangencia) de cada UF se pide en paralelo;
+    #     antes esto era secuencial (27 peticiones encadenadas).
     tareas = []
-    for uf in estados:
+    ufs_con_muns = [uf for uf in estados if municipios.get(uf)]
+    with ThreadPoolExecutor(max_workers=min(len(ufs_con_muns) or 1, args.workers)) as ex:
+        versiones_por_uf = dict(zip(ufs_con_muns, ex.map(versiones_abrangencia, ufs_con_muns)))
+
+    municipios_pendientes = 0
+    for uf in ufs_con_muns:
         muns_uf = municipios.get(uf, [])
-        if not muns_uf:
-            continue
-        versiones = versiones_abrangencia(uf)
+        versiones = versiones_por_uf.get(uf) or {}
         if not versiones:
             continue
         intentados = 0
@@ -360,33 +460,60 @@ def realizar_barrido(municipios, estado, args, n_pasada, deadline=None):
             version = versiones.get(municipio["cd"])
             if version is None or estado.get(clave) == version:
                 continue
+            # Al inicio del escrutinio casi ninguna zona existe todavía. Si el
+            # municipio no totalizó nada, saltamos sus zonas (evita miles de
+            # peticiones vacías). No se marca como hecho, así se reintenta.
+            if progreso_de_version(version) <= 0:
+                continue
             if args.max_mun and intentados >= args.max_mun:
                 break
             intentados += 1
-            tareas.append((uf, municipio, version))
-    print(f"[i] Tareas pendientes: {len(tareas)} municipios.")
+            municipios_pendientes += 1
+            for zona in (municipio["zonas"] or [""]):
+                tareas.append((uf, municipio, zona, version))
+    print(f"[i] Tareas pendientes: {municipios_pendientes} municipios / "
+          f"{len(tareas)} zonas.")
+
+    # 1b) Intercalar las tareas de todos los estados (round-robin) para que
+    #     ningún estado quede sistemáticamente al final del barrido: así la
+    #     marca de tiempo observada de cada zona no hereda el orden alfabético.
+    deques = {}
+    for t in tareas:
+        deques.setdefault(t[0], []).append(t)
+    tareas_intercaladas = []
+    while deques:
+        for uf in list(deques):
+            tareas_intercaladas.append(deques[uf].pop(0))
+            if not deques[uf]:
+                del deques[uf]
+    tareas = tareas_intercaladas
 
     # 2) Descargar en paralelo con un único pool (cubre todos los estados a la vez).
     filas = []
-    procesados = 0
+    exitos = {}
     with ThreadPoolExecutor(max_workers=args.workers) as ex:
         futuros = {
-            ex.submit(procesar_municipio, uf, mun, ver, n_pasada): (uf, mun, ver)
-            for uf, mun, ver in tareas
+            ex.submit(procesar_zona, uf, mun, zona, ver, n_pasada): (uf, mun, ver)
+            for uf, mun, zona, ver in tareas
         }
         for fut in as_completed(futuros):
             uf, mun, ver = futuros[fut]
             try:
-                resultado = fut.result()
+                fila = fut.result()
             except Exception:
-                resultado = []
-            if resultado:
-                filas.extend(resultado)
-                estado[f"{uf}/{mun['cd']}"] = ver
-                procesados += 1
+                fila = None
+            if fila:
+                filas.append(fila)
+                exitos[f"{uf}/{mun['cd']}"] = ver
+    for clave, ver in exitos.items():
+        estado[clave] = ver
+    procesados = len(exitos)
 
     escribir_filas(filas)
     guardar_estado(estado)
+    registrar_log_barrido(t0, n_pasada, procesados, len(filas), args)
+    if _contadores:
+        print(f"[i] Respuestas HTTP: {dict(sorted(_contadores.items()))}")
     print(f"[OK] Ciclo N° {n_pasada} terminado. Municipios actualizados: "
           f"{procesados}, zonas: {len(filas)}")
     return len(filas)
@@ -458,7 +585,9 @@ def main():
     parser.add_argument("--una-pasada", action="store_true", help="Un solo ciclo y salir.")
     parser.add_argument("--max-mun", type=int, help="Limite de municipios por UF (pruebas).")
     parser.add_argument("--max-segundos", type=int, help="Corta el barrido tras N segundos.")
-    parser.add_argument("--workers", type=int, default=32, help="Hilos concurrentes.")
+    parser.add_argument("--workers", type=int, default=128, help="Hilos concurrentes.")
+    parser.add_argument("--limite", type=int, default=80,
+                        help="Peticiones por segundo (token bucket global). TSE ~100 máx.")
     parser.add_argument("--intervalo", type=int, default=20, help="Segundos entre ciclos.")
     parser.add_argument("--probar", action="store_true", help="Validar conectividad y parseo.")
     parser.add_argument("--padron", action="store_true",
@@ -466,13 +595,15 @@ def main():
     parser.add_argument("--sin-serie", action="store_true",
                         help="No registrar snapshots nacionales/estatales/exterior.")
     args = parser.parse_args()
+    configurar_limite(args.limite)
 
     if args.probar:
         probar(args.uf or "sp")
         return
 
     print("[*] zonpasG_rodri — Raspador consolidado TSE 2026 por zona electoral.")
-    print(f"[*] Ámbitos: 26 estados + DF + exterior (zz) | hilos: {args.workers}.")
+    print(f"[*] Ámbitos: 26 estados + DF + exterior (zz) | hilos: {args.workers} | "
+          f"límite: {args.limite} req/s.")
     print(f"[*] Archivo de salida: {ARCHIVO_CSV}")
     municipios = cargar_municipios()
     if not municipios:

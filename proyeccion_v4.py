@@ -35,7 +35,9 @@ from proyeccion_swing import (
 )
 from proyeccion_v3 import _bloque, _bloque_crudo, _pct
 
-ARCHIVO_JSON_V4 = "datos_proyeccion_v4_2026.json"
+import rutas_datos as rd
+
+ARCHIVO_JSON_V4 = rd.ruta("datos_proyeccion_v4_2026.json")
 MIN_N = 5   # zonas escrutadas mínimas para usar el swing propio del estado
 T_SWING = 0.30   # % escrutado del estado a partir del cual manda su swing (antes: nacional)
 

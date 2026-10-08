@@ -32,9 +32,11 @@ CODIGO_6D      = "006257"
 CARGO          = "0001"        # Presidente
 CARGO_NOMBRE   = "Presidente"
 
-ARCHIVO_CSV    = "escrutinio_zonas_2026.csv"
-ARCHIVO_ESTADO = "control_versiones_2026.json"
-ARCHIVO_SERIE  = "serie_temporal_2026.csv"   # snapshots nacionales/estatales
+import rutas_datos as rd
+
+ARCHIVO_CSV    = rd.ruta("escrutinio_zonas_2026.csv")
+ARCHIVO_ESTADO = rd.ruta("control_versiones_2026.json")
+ARCHIVO_SERIE  = rd.ruta("serie_temporal_2026.csv")   # snapshots nacionales/estatales
 
 ESTADOS = ["ac", "al", "am", "ap", "ba", "ce", "df", "es", "go", "ma", "mg", "ms", "mt",
            "pa", "pb", "pe", "pi", "pr", "rj", "rn", "ro", "rr", "rs", "sc", "se", "sp", "to"]

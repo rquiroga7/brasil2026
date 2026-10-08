@@ -33,6 +33,8 @@ if hasattr(sys.stdout, "reconfigure"):
 import numpy as np
 import pandas as pd
 
+import rutas_datos as rd
+
 # Reutilizamos la carga de datos del v1 para que la semántica coincida.
 from extrapolador10B_rodri import (
     normalizar_codigo,
@@ -46,9 +48,9 @@ from extrapolador10B_rodri import (
     ARCHIVO_HIST_SWING,
 )
 
-ARCHIVO_ZONAS_2022 = "escrutinio_zonas_2022.csv"
-ARCHIVO_VIVO_2026 = "escrutinio_zonas_2026.csv"
-ARCHIVO_JSON_SWING = "datos_proyeccion_swing_2026.json"
+ARCHIVO_ZONAS_2022 = rd.ruta("escrutinio_zonas_2022.csv")
+ARCHIVO_VIVO_2026 = rd.ruta("escrutinio_zonas_2026.csv")
+ARCHIVO_JSON_SWING = rd.ruta("datos_proyeccion_swing_2026.json")
 
 N_SIM = 300
 MIN_ZONAS_ESTADO = 5          # zonas escrutadas mínimas para usar swing propio

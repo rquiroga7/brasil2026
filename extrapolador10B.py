@@ -6,12 +6,14 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import pandas as pd
 
+import rutas_datos as rd
+
 # === ARCHIVOS DE ENTRADA Y SALIDA ===
-ARCHIVO_BASE_2022 = "padron_y_asistencia_2022.csv"
-ARCHIVO_PADRON_2026 = "padron_2026.csv"    # electores habilitados 2026 por zona
-ARCHIVO_VIVO_2026 = "escrutinio_zonas_2026.csv"
-ARCHIVO_LOG_PROYECCIONES = "historico_proyecciones_2026.csv"
-ARCHIVO_IMAGEN_WEB = "grafico_vivo_2026.png"
+ARCHIVO_BASE_2022 = rd.ruta("padron_y_asistencia_2022.csv")
+ARCHIVO_PADRON_2026 = rd.ruta("padron_2026.csv")    # electores habilitados 2026 por zona
+ARCHIVO_VIVO_2026 = rd.ruta("escrutinio_zonas_2026.csv")
+ARCHIVO_LOG_PROYECCIONES = rd.ruta("historico_proyecciones_2026.csv")
+ARCHIVO_IMAGEN_WEB = rd.ruta("grafico_vivo_2026.png")
 
 # === SALIDA WEB ===
 # La publicación del gráfico se hace desde GitHub Actions (rama gh-pages o

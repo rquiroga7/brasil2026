@@ -37,22 +37,25 @@ import proyeccion_swing as sw
 import proyeccion_schteingart as sc
 import proyeccion_v4 as v4
 
-ARCHIVOS = ["escrutinio_zonas_2026.csv",
-            "escrutinio_zonas_2026maquinalabo.csv",
-            "escrutinio_zonas_2026maquinarafa.csv"]
+import rutas_datos as rd
+import estilo_plot as ep
+
+ARCHIVOS = [rd.ruta("escrutinio_zonas_2026.csv"),
+            rd.ruta("escrutinio_zonas_2026maquinalabo.csv"),
+            rd.ruta("escrutinio_zonas_2026maquinarafa.csv")]
 OBJETIVOS_NAC = [5, 10, 20, 35, 50, 75, 100]
 BINS_ESTADO = [5, 10, 20, 35, 50, 75, 100]
 N_SNAPS = 25
-SNAP_DIR = "backtest_snapshots"
-RES_DIR = "backtest_resultados"
+SNAP_DIR = rd.ruta_dir("backtest_snapshots")
+RES_DIR = rd.ruta_dir("backtest_resultados")
 GRUPOS = ["sw", "v4", "scht"]   # sw -> crudo,v1,v2 ; scht -> scht,scht_ng
 
 METODOS = OrderedDict([
     ("crudo", ("#9AA0A6", "Conteo crudo TSE (muestra sesgada)")),
-    ("v1",  ("#E11B22", "v1 Estratificado: media de lo contado")),
-    ("v2",  ("#4C8DFF", "v2 Swing uniforme NACIONAL: 2022 + swing nacional")),
+    ("v1",  ("#E11B22", "Etchenique: media estratificada de lo contado")),
+    ("v2",  ("#4C8DFF", "Quiroga: swing uniforme nacional (2022 + swing)")),
     ("scht", ("#2E7D32", "Schteingart (con gate): crudo hasta estar listo")),
-    ("scht_ng", ("#8B5CF6", "Schteingart SIN gate: proyecta siempre")),
+    ("scht_ng", ("#8B5CF6", "Schteingart sin gate: proyecta siempre")),
     ("v4",  ("#B8860B", "v4 Swing por ESTADO (encogido a nacional si falta dato)")),
 ])
 
@@ -250,12 +253,13 @@ def graficar(acum_a, acum_b):
     ax.set_ylabel("Error |ΔLula| + |ΔFlavio| (puntos)", fontsize=10)
     ax.set_xticks(OBJETIVOS_NAC)
     ax.set_ylim(0, 10)
-    ax.set_title("A) Error nacional por % escrutado (promedio de 3 raspados)",
+    ax.set_title("A) Brasil: error nacional por % escrutado (promedio de 3 raspados)",
                  fontsize=11, fontweight="bold")
     ax.grid(True, linestyle="--", alpha=0.5)
     ax.legend(fontsize=8, loc="upper right", title="Método", title_fontsize=9)
     fig.tight_layout()
-    fig.savefig("backtest_metodos_2026.png", dpi=120, bbox_inches="tight")
+    ep.mpl(fig, "Backtest de métodos de proyección por % escrutado (promedio de raspados).")
+    fig.savefig(rd.ruta("backtest_metodos_2026.png"), dpi=120, bbox_inches="tight")
     plt.close(fig)
 
     fig, ax = plt.subplots(figsize=(11, 7))
@@ -268,12 +272,14 @@ def graficar(acum_a, acum_b):
     ax.set_ylabel("Error |ΔLula| + |ΔFlavio| (puntos)", fontsize=10)
     ax.set_xticks(BINS_ESTADO)
     ax.set_ylim(0, 10)
-    ax.set_title("B) Error por estado según su propio % escrutado (prom. estados × 3 raspados)",
+    ax.set_title("B) Brasil: error por estado según su propio % escrutado (prom. estados × 3 raspados)",
                  fontsize=11, fontweight="bold")
     ax.grid(True, linestyle="--", alpha=0.5)
     ax.legend(fontsize=8, loc="upper right", title="Método", title_fontsize=9)
     fig.tight_layout()
-    fig.savefig("backtest_estados_2026.png", dpi=120, bbox_inches="tight")
+    ep.mpl(fig, "Backtest de métodos de proyección por % escrutado del estado "
+                "(promedio estados × raspados).")
+    fig.savefig(rd.ruta("backtest_estados_2026.png"), dpi=120, bbox_inches="tight")
     plt.close(fig)
     print("\n[i] Gráficos: backtest_metodos_2026.png, backtest_estados_2026.png")
 
@@ -296,7 +302,7 @@ def main():
 
     # referencia final
     rows0 = cargar(ARCHIVOS[0])
-    full = tempfile.mktemp(suffix=".csv")
+    full = tempfile.mktemp(suffix=".csv", dir=rd.ruta_dir("raw"))
     escribir(rows0, full)
     sw.ARCHIVO_VIVO_2026 = full
     with contextlib.redirect_stdout(io.StringIO()):

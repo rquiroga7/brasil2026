@@ -1,0 +1,36 @@
+{
+  "final_lula": 45.16078206069611,
+  "final_flavio": 47.0257045004111,
+  "mejor_por_tramo": {
+    "hasta_2pct": "Schteingart",
+    "hasta_5pct": "Schteingart",
+    "hasta_10pct": "Schteingart",
+    "hasta_20pct": "Quiroga"
+  },
+  "error_medio_por_tramo": {
+    "hasta_2pct": {
+      "Schteingart": 2.95,
+      "Quiroga": 3.13,
+      "Etchenique": 3.93,
+      "Conteo crudo": 4.66
+    },
+    "hasta_5pct": {
+      "Schteingart": 2.28,
+      "Quiroga": 2.63,
+      "Etchenique": 3.45,
+      "Conteo crudo": 5.53
+    },
+    "hasta_10pct": {
+      "Schteingart": 1.88,
+      "Quiroga": 2.04,
+      "Etchenique": 3.15,
+      "Conteo crudo": 6.24
+    },
+    "hasta_20pct": {
+      "Quiroga": 1.51,
+      "Schteingart": 1.74,
+      "Etchenique": 2.63,
+      "Conteo crudo": 6.98
+    }
+  }
+}

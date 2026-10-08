@@ -37,12 +37,14 @@ if hasattr(sys.stdout, "reconfigure"):
 
 import requests
 
-ARCHIVO_HISTORICO = "historico_proyecciones_2026.csv"
-ARCHIVO_JSON = "datos_proyeccion_2026.json"
-ARCHIVO_JSON_SWING = "datos_proyeccion_swing_2026.json"
-ARCHIVO_JSON_SCHT = "datos_proyeccion_schteingart_2026.json"
-ARCHIVO_JSON_V4 = "datos_proyeccion_v4_2026.json"
-ARCHIVO_WEB = "datos_web.json"
+import rutas_datos as rd
+
+ARCHIVO_HISTORICO = rd.ruta("historico_proyecciones_2026.csv")
+ARCHIVO_JSON = rd.ruta("datos_proyeccion_2026.json")
+ARCHIVO_JSON_SWING = rd.ruta("datos_proyeccion_swing_2026.json")
+ARCHIVO_JSON_SCHT = rd.ruta("datos_proyeccion_schteingart_2026.json")
+ARCHIVO_JSON_V4 = rd.ruta("datos_proyeccion_v4_2026.json")
+ARCHIVO_WEB = rd.ruta("datos_web.json")
 
 
 def construir_serie():

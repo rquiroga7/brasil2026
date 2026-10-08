@@ -57,10 +57,12 @@ PLEITO         = "3220"        # código del pleito (para los Boletines de Urna)
 CARGO          = "0001"        # Presidente (4 dígitos)
 CARGO_NOMBRE   = "Presidente"
 
-ARCHIVO_CSV    = "escrutinio_zonas_2026.csv"
-ARCHIVO_ESTADO = "control_versiones_2026.json"
-ARCHIVO_SERIE  = "serie_temporal_2026.csv"    # snapshots nacionales/estatales
-ARCHIVO_PADRON = "padron_2026.csv"            # electores habilitados 2026
+import rutas_datos as rd
+
+ARCHIVO_CSV    = rd.ruta("escrutinio_zonas_2026.csv")
+ARCHIVO_ESTADO = rd.ruta("control_versiones_2026.json")
+ARCHIVO_SERIE  = rd.ruta("serie_temporal_2026.csv")    # snapshots nacionales/estatales
+ARCHIVO_PADRON = rd.ruta("padron_2026.csv")            # electores habilitados 2026
 
 # "zz" = exterior (134 países, 186 ciudades). Se incluye como un ámbito más.
 ESTADOS = ["ac", "al", "am", "ap", "ba", "ce", "df", "es", "go", "ma", "mg", "ms", "mt",

@@ -38,9 +38,11 @@ URL_HIST = {
 URL_CANDIDATOS = f"{BASE_CDN}/odsele/votacao_candidato_munzona/votacao_candidato_munzona_2022.zip"
 URL_DETALHE    = f"{BASE_CDN}/odsele/detalhe_votacao_munzona/detalhe_votacao_munzona_2022.zip"
 
-ARCHIVO_ZONAS = "escrutinio_zonas_2022.csv"
-ARCHIVO_CAND  = "candidatos_2022.csv"
-CARPETA_DATOS = "dados_tse_2022"
+import rutas_datos as rd
+
+ARCHIVO_ZONAS = rd.ruta("escrutinio_zonas_2022.csv")
+ARCHIVO_CAND  = rd.ruta("candidatos_2022.csv")
+CARPETA_DATOS = rd.ruta_dir("dados_tse_2022")
 COD_CARGO_PRES = "1"
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -132,7 +134,7 @@ def parsear_historico(ruta_zip, turno):
             idx_branco_pe = ix.get("BRANCO_PE_VOTOS_TOT_ACUMULADO")
             idx_nulo_pe = ix.get("NULO_PE_VOTOS_TOT_ACUMULADO")
 
-            salida = f"historico_nacional_2022_{turno.lower()}.csv"
+            salida = rd.ruta(f"historico_nacional_2022_{turno.lower()}.csv")
             cab = (["dt_totalizacao", "ts", "pe_secoes_acumulado", "secoes_acumulado",
                     "secoes_total", "aptos_total", "votos_acumulado",
                     "votos_concorrentes_acumulado"]

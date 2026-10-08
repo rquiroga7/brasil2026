@@ -10,7 +10,9 @@ from datetime import datetime
 #   * rutas vigentes EA20: config/mun-e<cod6>-cm.json y
 #     dados/<uf>/<uf><mun>-z<zona>-c<cargo>-e<cod6>-u.json
 #     (la vieja usaba -i.json de estado y -m...-v.json de municipio, que ya no existen)
-ARCHIVO_CSV = "escrutinio_zonas_2026.csv"
+import rutas_datos as rd
+
+ARCHIVO_CSV = rd.ruta("escrutinio_zonas_2026.csv")
 DOMINIO_BASE = "https://resultados.tse.jus.br"
 ANO_ELECCION = "ele2026"
 CODIGO_ELEICAO = "6257"
