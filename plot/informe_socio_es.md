@@ -31,6 +31,11 @@ Factores socioeconómicos municipales (Censo 2022) cruzados con 5570 municipios.
 | Ingreso per cápita | 3 | 0.0% | 94.4% | 2.2% |
 | Ingreso per cápita | 4 | 0.0% | 96.4% | 1.4% |
 | Ingreso per cápita | 5 | 0.0% | 95.9% | 0.4% |
+| % universitarios | 1 | 0.0% | 92.0% | 41.6% |
+| % universitarios | 2 | 0.0% | 94.1% | 19.3% |
+| % universitarios | 3 | 0.0% | 94.9% | 16.9% |
+| % universitarios | 4 | 0.0% | 92.3% | 18.6% |
+| % universitarios | 5 | 0.0% | 91.6% | 20.6% |
 | % evangélicos | 1 | 0.0% | 93.6% | 30.8% |
 | % evangélicos | 2 | 0.0% | 95.4% | 2.7% |
 | % evangélicos | 3 | 0.0% | 93.0% | 13.6% |

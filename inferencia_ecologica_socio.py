@@ -151,11 +151,14 @@ def ei_por_quintiles(m_sec, var, q=5):
     for g, sub in m.groupby("q"):
         if len(sub) < 500:
             continue
-        th = ie.em_transicion(sub[cols_o].to_numpy(float), sub[cols_d].to_numpy(float))
+        X = sub[cols_o].to_numpy(float)
+        th = ie.em_transicion(X, sub[cols_d].to_numpy(float))
+        N_o = X.sum(0)  # personas por bloque de origen en este quintil
         for j, oj in enumerate(lab_o):
             for kk, dk in enumerate(lab_d):
                 filas.append({"factor": var, "quintil": int(g), "origen": oj,
-                              "destino": dk, "p": th[j, kk], "n": len(sub)})
+                              "destino": dk, "p": th[j, kk],
+                              "votos": th[j, kk] * N_o[j], "n": len(sub)})
     return pd.DataFrame(filas)
 
 
@@ -219,7 +222,7 @@ def graficar_panel(muni, corr, reg_sin, reg_con):
     plt.close(fig)
 
 
-def graficar_grupo(quints, claves, archivo, titulo, meto):
+def graficar_grupo(quints, claves, archivo, titulo, meto, absoluto=False):
     q = quints
     fig, axes = plt.subplots(1, 3, figsize=(12, 9))
     for ax, var in zip(axes, ["ingreso", "univ", "religion"]):
@@ -228,12 +231,14 @@ def graficar_grupo(quints, claves, archivo, titulo, meto):
             s = sub[(sub["origen"] == oj) & (sub["destino"] == dk)].sort_values("quintil")
             if s.empty:
                 continue
-            ax.plot(s["quintil"] + 1, s["p"] * 100, "o-", label=f"{oj}→{dk}")
+            y = s["votos"] / 1e6 if absoluto else s["p"] * 100
+            ax.plot(s["quintil"] + 1, y, "o-", label=f"{oj}→{dk}")
         ax.set_title(f"Quintil de {NOMBRES[var]}", fontsize=9)
         ax.set_xlabel("Quintil")
-        ax.set_ylabel("% del bloque de origen")
+        ax.set_ylabel("Millones de votos/personas" if absoluto else "% del bloque de origen")
         ax.grid(alpha=0.35, ls="--")
-    fig.suptitle(f"Brasil: {titulo} (2022→2026)", fontsize=12)
+    suf = " — millones de votos/personas" if absoluto else ""
+    fig.suptitle(f"Brasil: {titulo} (2022→2026){suf}", fontsize=12)
     axes[0].legend(fontsize=7)
     fig.tight_layout(rect=[0, 0.03, 1, 0.96])
     ep.mpl(fig, meto)
@@ -340,19 +345,23 @@ def main():
     socio, _ = cargar_socio()
     m_sec = m_sec.merge(socio, on="ibge", how="left")
 
-    partes = [ei_por_quintiles(m_sec, v) for v in ["ingreso", "bf", "religion"]]
+    partes = [ei_por_quintiles(m_sec, v) for v in ["ingreso", "univ", "religion"]]
     quints = pd.concat(partes, ignore_index=True)
     quints.to_csv(os.path.join(OUT, "socio_ei_quintiles.csv"), index=False)
 
     graficar_panel(muni, corr, reg_sin, reg_con)
+    METO_LULA = ("Transiciones de voto hacia/desde Lula (2022→2026) por quintil de factores "
+                 "socioeconómicos; inferencia ecológica por secciones electorales (EM).")
+    METO_BOLSO = ("Transiciones de voto desde Bolsonaro 2022 y hacia Flávio 2026 por quintil de "
+                  "factores socioeconómicos; inferencia ecológica por secciones electorales (EM).")
     graficar_grupo(quints, CLAVES_LULA, "socio_ei_lula.png",
-                   "transiciones hacia/desde Lula",
-                   "Transiciones de voto hacia/desde Lula (2022→2026) por quintil de factores "
-                   "socioeconómicos; inferencia ecológica por secciones electorales (EM).")
+                   "transiciones hacia/desde Lula", METO_LULA)
+    graficar_grupo(quints, CLAVES_LULA, "socio_ei_abs_lula.png",
+                   "transiciones hacia/desde Lula", METO_LULA, absoluto=True)
     graficar_grupo(quints, CLAVES_BOLSO, "socio_ei_bolso_flavio.png",
-                   "transiciones desde Bolsonaro y hacia Flávio",
-                   "Transiciones de voto desde Bolsonaro 2022 y hacia Flávio 2026 por quintil de "
-                   "factores socioeconómicos; inferencia ecológica por secciones electorales (EM).")
+                   "transiciones desde Bolsonaro y hacia Flávio", METO_BOLSO)
+    graficar_grupo(quints, CLAVES_BOLSO, "socio_ei_abs_bolso_flavio.png",
+                   "transiciones desde Bolsonaro y hacia Flávio", METO_BOLSO, absoluto=True)
     open(os.path.join(OUT, "informe_socio_es.md"), "w", encoding="utf-8").write(
         reporte(muni, corr, reg_con, r2_con, n_con, quints, "es"))
     open(os.path.join(OUT, "relatorio_socio_pt.md"), "w", encoding="utf-8").write(
