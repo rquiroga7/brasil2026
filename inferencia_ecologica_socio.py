@@ -46,7 +46,7 @@ SOCIO_DIR = rd.ruta_dir("socio")
 OUT = ie.OUT_DIR
 COLS_O = [c + "_o" for c in ie.COLS5]
 COLS_D = [c + "_d" for c in ie.COLS5]
-VARS = ["bf", "ingreso", "raza", "religion", "univ"]
+VARS = ["ingreso", "raza", "religion", "univ"]
 NOMBRES = {"bf": "Bolsa Família (por 100 hog.)", "ingreso": "Ingreso per cápita",
            "raza": "% blancos", "religion": "% evangélicos", "univ": "% universitarios"}
 
@@ -137,16 +137,23 @@ def correlaciones(df, ycol):
 
 
 def ei_por_quintiles(m_sec, var, q=5):
+    """Matriz 4×4 (Lula, Bolsonaro/Flávio, Otros, No voto/Blanco-Nulo) por quintil."""
     m = m_sec.dropna(subset=[var]).copy()
     m["q"] = pd.qcut(m[var], q, labels=False, duplicates="drop")
+    m["b1_o"], m["b2_o"], m["b3_o"] = m["blk_lula_o"], m["blk_bolso_o"], m["blk_otros_o"]
+    m["b4_o"] = m["blk_bn_o"] + m["blk_novoto_o"]
+    m["b1_d"], m["b2_d"], m["b3_d"] = m["blk_lula_d"], m["blk_bolso_d"], m["blk_otros_d"]
+    m["b4_d"] = m["blk_bn_d"] + m["blk_novoto_d"]
+    cols_o, cols_d = ["b1_o", "b2_o", "b3_o", "b4_o"], ["b1_d", "b2_d", "b3_d", "b4_d"]
+    lab_o = ["Lula", "Bolsonaro", "Otros", "No voto/Blanco-Nulo"]
+    lab_d = ["Lula", "Flavio", "Otros", "No voto/Blanco-Nulo"]
     filas = []
     for g, sub in m.groupby("q"):
         if len(sub) < 500:
             continue
-        X, Y = ie._mat(sub, COLS_O, COLS_D)
-        th = ie.em_transicion(X, Y)
-        for j, oj in enumerate(ie.ANIOS[2022]["labels"]):
-            for kk, dk in enumerate(ie.ANIOS[2026]["labels"]):
+        th = ie.em_transicion(sub[cols_o].to_numpy(float), sub[cols_d].to_numpy(float))
+        for j, oj in enumerate(lab_o):
+            for kk, dk in enumerate(lab_d):
                 filas.append({"factor": var, "quintil": int(g), "origen": oj,
                               "destino": dk, "p": th[j, kk], "n": len(sub)})
     return pd.DataFrame(filas)
@@ -156,7 +163,7 @@ def graficar_panel(muni, corr, reg_sin, reg_con):
     fig, axes = plt.subplots(2, 2, figsize=(8 * 1.0, 6 * 1.0))  # placeholder, fixed below
     fig.set_size_inches(11, 8.25)  # 4:3
     ax = axes[0, 0]
-    for v, color in (("ingreso", "#2C5FBF"), ("bf", "#E11B22")):
+    for v, color in (("ingreso", "#2C5FBF"), ("univ", "#E11B22")):
         d = muni.dropna(subset=[v, "swing_lula"]).copy()
         d["q"] = pd.qcut(d[v], 5, labels=False, duplicates="drop")
         agg = d.groupby("q")["swing_lula"].agg(["mean", "std", "size"])
@@ -212,29 +219,37 @@ def graficar_panel(muni, corr, reg_sin, reg_con):
     plt.close(fig)
 
 
-def graficar_ei(quints):
-    """P(destino|origen) clave por quintil de cada factor."""
-    claves = [("Bolsonaro", "Lula"), ("Bolsonaro", "Flavio"), ("Lula", "Flavio"),
-              ("Otros", "Flavio"), ("Otros", "Lula")]
-    fig, axes = plt.subplots(1, 3, figsize=(11, 8.25 * 0 + 11 * 3 / 4 / 3))
-    fig.set_size_inches(12, 9)  # 4:3
-    for ax, var in zip(axes, ["ingreso", "bf", "religion"]):
-        sub = quints[quints["factor"] == var]
+def graficar_grupo(quints, claves, archivo, titulo, meto):
+    q = quints
+    fig, axes = plt.subplots(1, 3, figsize=(12, 9))
+    for ax, var in zip(axes, ["ingreso", "univ", "religion"]):
+        sub = q[q["factor"] == var]
         for oj, dk in claves:
             s = sub[(sub["origen"] == oj) & (sub["destino"] == dk)].sort_values("quintil")
             if s.empty:
                 continue
             ax.plot(s["quintil"] + 1, s["p"] * 100, "o-", label=f"{oj}→{dk}")
-        ax.set_title(f"Brasil: transición por quintil de {NOMBRES[var]}", fontsize=9)
+        ax.set_title(f"Quintil de {NOMBRES[var]}", fontsize=9)
         ax.set_xlabel("Quintil")
         ax.set_ylabel("% del bloque de origen")
         ax.grid(alpha=0.35, ls="--")
+    fig.suptitle(f"Brasil: {titulo} (2022→2026)", fontsize=12)
     axes[0].legend(fontsize=7)
-    fig.tight_layout()
-    ep.mpl(fig, "Transiciones de voto 2022→2026 por quintil de factores socioeconómicos; "
-                "inferencia ecológica por secciones electorales (EM).")
-    fig.savefig(os.path.join(OUT, "socio_ei_quintiles.png"), dpi=140, bbox_inches="tight")
+    fig.tight_layout(rect=[0, 0.03, 1, 0.96])
+    ep.mpl(fig, meto)
+    fig.savefig(os.path.join(OUT, archivo), dpi=140, bbox_inches="tight")
     plt.close(fig)
+
+
+# Transiciones hacia/desde Lula
+CLAVES_LULA = [("Lula", "Lula"), ("Lula", "Flavio"), ("Lula", "Otros"),
+               ("Lula", "No voto/Blanco-Nulo"),
+               ("Otros", "Lula"), ("No voto/Blanco-Nulo", "Lula")]
+# Transiciones desde Bolsonaro y hacia Flávio
+CLAVES_BOLSO = [("Bolsonaro", "Flavio"), ("Bolsonaro", "Otros"),
+                ("Bolsonaro", "No voto/Blanco-Nulo"),
+                ("Lula", "Flavio"), ("Otros", "Flavio"),
+                ("No voto/Blanco-Nulo", "Flavio")]
 
 
 def reporte(muni, corr, reg_con, r2_con, n_con, quints, idioma):
@@ -272,7 +287,7 @@ def reporte(muni, corr, reg_con, r2_con, n_con, quints, idioma):
         lineas.append("## A inferência ecológica muda? Transições-chave por quintil\n")
     lineas.append("| Factor | Quintil | Bolsonaro→Lula | Bolsonaro→Flávio | Otros→Flávio |")
     lineas.append("|---|---|---|---|---|")
-    for var in ["ingreso", "bf", "religion"]:
+    for var in ["ingreso", "univ", "religion"]:
         sub = quints[quints["factor"] == var]
         for q in sorted(sub["quintil"].unique()):
             def g(oj, dk):
@@ -330,7 +345,14 @@ def main():
     quints.to_csv(os.path.join(OUT, "socio_ei_quintiles.csv"), index=False)
 
     graficar_panel(muni, corr, reg_sin, reg_con)
-    graficar_ei(quints)
+    graficar_grupo(quints, CLAVES_LULA, "socio_ei_lula.png",
+                   "transiciones hacia/desde Lula",
+                   "Transiciones de voto hacia/desde Lula (2022→2026) por quintil de factores "
+                   "socioeconómicos; inferencia ecológica por secciones electorales (EM).")
+    graficar_grupo(quints, CLAVES_BOLSO, "socio_ei_bolso_flavio.png",
+                   "transiciones desde Bolsonaro y hacia Flávio",
+                   "Transiciones de voto desde Bolsonaro 2022 y hacia Flávio 2026 por quintil de "
+                   "factores socioeconómicos; inferencia ecológica por secciones electorales (EM).")
     open(os.path.join(OUT, "informe_socio_es.md"), "w", encoding="utf-8").write(
         reporte(muni, corr, reg_con, r2_con, n_con, quints, "es"))
     open(os.path.join(OUT, "relatorio_socio_pt.md"), "w", encoding="utf-8").write(

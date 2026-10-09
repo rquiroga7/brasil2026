@@ -76,11 +76,11 @@
   <section id="tab-proj">
     <div class="toolbar">
       <div class="seg" id="seg_metodo">
-        <button data-m="swing" class="active">Swing nacional (v2)</button>
+        <button data-m="swing" class="active">Quiroga</button>
         <button data-m="scht_ng">Schteingart sin gate</button>
-        <button data-m="schteingart">2026 Schteingart</button>
+        <button data-m="schteingart">Schteingart</button>
         <button data-m="v4">Swing por estado (v4)</button>
-        <button data-m="v1">Estratificado (v1)</button>
+        <button data-m="v1">Etchenique</button>
       </div>
       <span class="small" id="nota_metodo"></span>
     </div>
@@ -131,9 +131,9 @@
       <h2>Evolución temporal</h2>
       <h3 style="font-size:.85rem;color:var(--muted);margin:.2rem 0 .3rem">Datos Crudos</h3>
       <canvas id="chart_raw"></canvas>
-      <h3 style="font-size:.85rem;color:var(--muted);margin:.8rem 0 .3rem">Método V1</h3>
+      <h3 style="font-size:.85rem;color:var(--muted);margin:.8rem 0 .3rem">Método Etchenique</h3>
       <canvas id="chart_ext"></canvas>
-      <h3 style="font-size:.85rem;color:var(--muted);margin:.8rem 0 .3rem">Método Swing (v2)</h3>
+      <h3 style="font-size:.85rem;color:var(--muted);margin:.8rem 0 .3rem">Método Quiroga</h3>
       <canvas id="chart_swing"></canvas>
     </div>
   </section>
@@ -182,8 +182,8 @@
 
   <footer>
     Proyección no oficial con fines de análisis.
-    <b>v2 (swing)</b>: share 2022 por zona + swing observado por estado, sobre válidos (excluye nulos y blancos), intervalo p5–p95.
-    <b>v1 (estratificado)</b>: electores 2026 × % asistencia 2022, fallback municipio → estado → nacional (excluye nulos).
+    <b>Quiroga</b>: share 2022 por zona + swing observado por estado, sobre válidos (excluye nulos y blancos), intervalo p5–p95.
+    <b>Etchenique</b>: electores 2026 × % asistencia 2022, fallback municipio → estado → nacional (excluye nulos).
     <b>Crudo</b>: votos efectivamente escrutados por la TSE (sin proyección).
   </footer>
 
@@ -250,8 +250,8 @@ function pintarNacional() {
   ctrl.textContent = datos.estado_control || "–";
   ctrl.className = "pill" + ((datos.estado_control || "").includes("INCERTEZA") ? " warn" : "");
 
-  const nombres = { scht_ng: "Schteingart sin gate", schteingart: "2026 Schteingart", v4: "v4 (swing por estado)", swing: "swing v2 (nacional)", v1: "estratificado v1" };
-  const etiq = { scht_ng: "Schteingart", schteingart: "Schteingart", v4: "v4", swing: "v2", v1: "v1" };
+  const nombres = { scht_ng: "Schteingart sin gate", schteingart: "Schteingart", v4: "v4 (swing por estado)", swing: "Quiroga", v1: "Etchenique" };
+  const etiq = { scht_ng: "Schteingart", schteingart: "Schteingart", v4: "v4", swing: "Quiroga", v1: "Etchenique" };
   $("metodo_nombre").textContent = "· método " + (nombres[metodo] || metodo);
   $("h_lula").textContent = "Proyectado · Lula (" + (etiq[metodo] || metodo) + ")";
   $("h_flavio").textContent = "Proyectado · Flavio (" + (etiq[metodo] || metodo) + ")";
