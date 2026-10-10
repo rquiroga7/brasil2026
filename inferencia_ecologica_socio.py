@@ -225,6 +225,7 @@ def graficar_panel(muni, corr, reg_sin, reg_con):
 def graficar_grupo(quints, claves, archivo, titulo, meto, absoluto=False):
     q = quints
     fig, axes = plt.subplots(1, 3, figsize=(12, 9))
+    ymin, ymax = np.inf, -np.inf
     for ax, var in zip(axes, ["ingreso", "univ", "religion"]):
         sub = q[q["factor"] == var]
         for oj, dk in claves:
@@ -233,10 +234,15 @@ def graficar_grupo(quints, claves, archivo, titulo, meto, absoluto=False):
                 continue
             y = s["votos"] / 1e6 if absoluto else s["p"] * 100
             ax.plot(s["quintil"] + 1, y, "o-", label=f"{oj}→{dk}")
+            ymin = min(ymin, float(y.min()))
+            ymax = max(ymax, float(y.max()))
         ax.set_title(f"Quintil de {NOMBRES[var]}", fontsize=9)
         ax.set_xlabel("Quintil")
         ax.set_ylabel("Millones de votos/personas" if absoluto else "% del bloque de origen")
         ax.grid(alpha=0.35, ls="--")
+    margen = 0.06 * (ymax - ymin) if ymax > ymin else 1.0
+    for ax in axes:                       # mismo eje y en las tres facetas
+        ax.set_ylim(max(0.0, ymin - margen), ymax + margen)
     suf = " — millones de votos/personas" if absoluto else ""
     fig.suptitle(f"Brasil: {titulo} (2022→2026){suf}", fontsize=12)
     axes[0].legend(fontsize=7)
@@ -320,7 +326,44 @@ def reporte(muni, corr, reg_con, r2_con, n_con, quints, idioma):
     return "\n".join(lineas) + f"\n\n---\n\n*{ep.CREDITO}*\n"
 
 
+def graficar_todo(muni, corr, reg_con, r2_con, n_con, quints):
+    """Genera todos los gráficos e informes a partir de los datos intermedios."""
+    graficar_panel(muni, corr, None, reg_con)
+    METO_LULA = ("Transiciones de voto hacia/desde Lula (2022→2026) por quintil de factores "
+                 "socioeconómicos; inferencia ecológica por secciones electorales (EM).")
+    METO_BOLSO = ("Transiciones de voto desde Bolsonaro 2022 y hacia Flávio 2026 por quintil de "
+                  "factores socioeconómicos; inferencia ecológica por secciones electorales (EM).")
+    graficar_grupo(quints, CLAVES_LULA, "socio_ei_lula.png",
+                   "transiciones hacia/desde Lula", METO_LULA)
+    graficar_grupo(quints, CLAVES_LULA, "socio_ei_abs_lula.png",
+                   "transiciones hacia/desde Lula", METO_LULA, absoluto=True)
+    graficar_grupo(quints, CLAVES_BOLSO, "socio_ei_bolso_flavio.png",
+                   "transiciones desde Bolsonaro y hacia Flávio", METO_BOLSO)
+    graficar_grupo(quints, CLAVES_BOLSO, "socio_ei_abs_bolso_flavio.png",
+                   "transiciones desde Bolsonaro y hacia Flávio", METO_BOLSO, absoluto=True)
+    open(os.path.join(OUT, "informe_socio_es.md"), "w", encoding="utf-8").write(
+        reporte(muni, corr, reg_con, r2_con, n_con, quints, "es"))
+    open(os.path.join(OUT, "relatorio_socio_pt.md"), "w", encoding="utf-8").write(
+        reporte(muni, corr, reg_con, r2_con, n_con, quints, "pt"))
+
+
+def solo_graficos():
+    """Regenera gráficos e informes desde los datos intermedios guardados (sin EM)."""
+    muni = pd.read_csv(os.path.join(OUT, "socio_municipios.csv"))
+    quints = pd.read_csv(os.path.join(OUT, "socio_ei_quintiles.csv"))
+    reg = pd.read_csv(os.path.join(OUT, "socio_regresion.csv"))
+    r2_con = float(reg["r2"].iloc[0]) if "r2" in reg.columns else float("nan")
+    n_con = int(reg["n"].iloc[0]) if "n" in reg.columns else len(muni)
+    reg_con = reg[["factor", "coef", "se", "t"]].copy()
+    corr = correlaciones(muni, "swing_lula")
+    graficar_todo(muni, corr, reg_con, r2_con, n_con, quints)
+    print("[OK] Gráficos regenerados desde datos guardados")
+
+
 def main():
+    if "--solo-graficos" in sys.argv:
+        solo_graficos()
+        return
     print("[*] Datos socioeconómicos + votos por municipio...")
     muni = dataset_municipal()
     cobertura = muni["ingreso"].notna().mean() * 100
@@ -349,23 +392,7 @@ def main():
     quints = pd.concat(partes, ignore_index=True)
     quints.to_csv(os.path.join(OUT, "socio_ei_quintiles.csv"), index=False)
 
-    graficar_panel(muni, corr, reg_sin, reg_con)
-    METO_LULA = ("Transiciones de voto hacia/desde Lula (2022→2026) por quintil de factores "
-                 "socioeconómicos; inferencia ecológica por secciones electorales (EM).")
-    METO_BOLSO = ("Transiciones de voto desde Bolsonaro 2022 y hacia Flávio 2026 por quintil de "
-                  "factores socioeconómicos; inferencia ecológica por secciones electorales (EM).")
-    graficar_grupo(quints, CLAVES_LULA, "socio_ei_lula.png",
-                   "transiciones hacia/desde Lula", METO_LULA)
-    graficar_grupo(quints, CLAVES_LULA, "socio_ei_abs_lula.png",
-                   "transiciones hacia/desde Lula", METO_LULA, absoluto=True)
-    graficar_grupo(quints, CLAVES_BOLSO, "socio_ei_bolso_flavio.png",
-                   "transiciones desde Bolsonaro y hacia Flávio", METO_BOLSO)
-    graficar_grupo(quints, CLAVES_BOLSO, "socio_ei_abs_bolso_flavio.png",
-                   "transiciones desde Bolsonaro y hacia Flávio", METO_BOLSO, absoluto=True)
-    open(os.path.join(OUT, "informe_socio_es.md"), "w", encoding="utf-8").write(
-        reporte(muni, corr, reg_con, r2_con, n_con, quints, "es"))
-    open(os.path.join(OUT, "relatorio_socio_pt.md"), "w", encoding="utf-8").write(
-        reporte(muni, corr, reg_con, r2_con, n_con, quints, "pt"))
+    graficar_todo(muni, corr, reg_con, r2_con, n_con, quints)
     print(f"[OK] Salidas en {OUT}")
 
 
