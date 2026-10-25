@@ -223,12 +223,19 @@ def main():
         if bu.empty:
             continue
         eu, _ = payload_ambito(bu, lu, uf.upper())
+        val1 = (bu["votos_totales"].sum() - bu["votos_blancos"].sum()
+                - bu["votos_nulos"].sum())
+        l1, f1 = bu["Lula"].sum(), bu["Flavio_Bolsonaro"].sum()
+        blk1 = {"lula": {"pct": round(100 * l1 / val1, 2) if val1 else 0.0},
+                "flavio": {"pct": round(100 * f1 / val1, 2) if val1 else 0.0},
+                "otros": {"pct": round(100 * (val1 - l1 - f1) / val1, 2) if val1 else 0.0}}
         estados.append({
             "uf": uf.upper(), "nombre": "Exterior" if uf == "zz" else NOMBRES_UF.get(uf.upper(), uf.upper()),
             "escrutado": eu["escrutado"],
             "electores": int(bu["electores"].sum()),
             "electores_habilitados": int(bu["electores"].sum()),
             "validos_proyectados": int(eu["swing"]["lula"]["votos"] + eu["swing"]["flavio"]["votos"]),
+            "1t": blk1,
             "crudo": eu["crudo"], "swing": eu["swing"], "schteingart": eu["schteingart"],
             "scht_ng": eu["scht_ng"],
         })

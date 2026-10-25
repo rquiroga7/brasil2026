@@ -165,6 +165,7 @@
           <th class="num">Electores 2026</th>
           <th>Proyección (Lula / Flavio / Otros)</th>
           <th class="num">Lula</th><th class="num">Flavio</th>
+          <th class="num" id="th_1t">1ª vuelta (Lula / Flavio)</th>
         </tr></thead>
         <tbody id="tabla_body"></tbody>
       </table>
@@ -389,8 +390,11 @@ function pintarTabla() {
   };
   if (ordenActual === "nombre") filas.sort((a, b) => a.nombre.localeCompare(b.nombre));
   else filas.sort((a, b) => val(b) - val(a));
+  const es2t = ronda === "2t";
+  $("th_1t").style.display = es2t ? "" : "none";
   $("tabla_body").innerHTML = filas.map((e) => {
     const b = bloqueMetodo(e, metodo) || {};
+    const u = e["1t"];
     return `<tr>
       <td><b>${e.nombre}</b> <span class="barlbl">${e.uf}</span></td>
       <td class="num">${fmtPct(e.escrutado)}</td>
@@ -398,6 +402,7 @@ function pintarTabla() {
       <td>${barra(b)}</td>
       <td class="num lula">${fmtPct(b.lula && b.lula.pct)}</td>
       <td class="num flavio">${fmtPct(b.flavio && b.flavio.pct)}</td>
+      ${es2t ? `<td class="num">${u ? u.lula.pct.toFixed(1) + "% / " + u.flavio.pct.toFixed(1) + "%" : "–"}</td>` : ""}
     </tr>`;
   }).join("");
 }
