@@ -17,8 +17,11 @@ Variables de entorno:
 import os
 import sys
 import time
+import atexit
 import argparse
 import subprocess
+
+import rutas_datos as rd
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -35,11 +38,42 @@ def correr(*args):
     return subprocess.run([PY, *args], cwd=REPO).returncode
 
 
+def _pid_vivo(pid):
+    try:
+        import ctypes
+        h = ctypes.windll.kernel32.OpenProcess(0x1000, 0, pid)  # QUERY_LIMITED_INFORMATION
+        if h:
+            ctypes.windll.kernel32.CloseHandle(h)
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def _tomar_lock(turno):
+    if turno != "2":
+        return None
+    ruta = rd.ruta("runner_2t.lock")
+    if os.path.exists(ruta):
+        try:
+            pid = int(open(ruta, encoding="utf-8").read().strip())
+        except (OSError, ValueError):
+            pid = 0
+        if pid and _pid_vivo(pid):
+            print(f"[!] Ya hay un runner 2T corriendo (pid {pid}). Salgo.")
+            sys.exit(1)
+    with open(ruta, "w", encoding="utf-8") as f:
+        f.write(str(os.getpid()))
+    atexit.register(lambda: os.path.exists(ruta) and os.remove(ruta))
+    return ruta
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--turno", default=os.environ.get("TURNO", "2"), choices=["1", "2"])
     args = ap.parse_args()
     turno = args.turno
+    _tomar_lock(turno)
 
     print(f"[*] Runner local | turno {turno} | raspador cada {SCRAPER_INTERVAL}s | "
           f"publicación cada {PUBLISH_INTERVAL}s")

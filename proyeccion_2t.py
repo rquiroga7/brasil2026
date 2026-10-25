@@ -15,8 +15,10 @@ Salida: datos_web_2t.json (mismo esquema que datos_web.json) + historico_2t.csv.
 """
 
 import os
+import io
 import sys
 import json
+import time
 from datetime import datetime
 
 import numpy as np
@@ -71,9 +73,28 @@ def modelo_error():
 def cargar(path):
     if not os.path.exists(path):
         return None
+    # Leer tolerando que el raspador esté escribiendo: descartar una última
+    # fila incompleta y reintentar si el archivo está vacío/ocupado.
+    txt = ""
+    for _ in range(4):
+        try:
+            with open(path, "r", encoding="utf-8", errors="replace") as f:
+                txt = f.read()
+        except OSError:
+            time.sleep(0.4)
+            continue
+        if txt and not txt.endswith("\n"):
+            corte = txt.rfind("\n")
+            txt = txt[:corte + 1] if corte >= 0 else ""
+        if txt.strip():
+            break
+        time.sleep(0.4)
+    if not txt.strip():
+        return None
     try:
-        df = pd.read_csv(path, dtype={"codigo_municipio": str, "zona_electoral": str})
-    except (pd.errors.ParserError, OSError, ValueError):
+        df = pd.read_csv(io.StringIO(txt),
+                         dtype={"codigo_municipio": str, "zona_electoral": str})
+    except (pd.errors.ParserError, ValueError):
         return None
     df["uf"] = df["estado_uf"].astype(str).str.upper()
     df["mun"] = df["codigo_municipio"].astype(str).str.zfill(5)
@@ -81,7 +102,11 @@ def cargar(path):
     for c in ["secoes_totalizadas", "electores", "votos_totales", "votos_blancos",
               "votos_nulos", "Lula", "Flavio_Bolsonaro"]:
         df[c] = pd.to_numeric(df.get(c, 0), errors="coerce").fillna(0)
-    return df
+    # Una fila por zona: la última observación (evita duplicar votos entre pasadas).
+    if "hora_local" in df.columns:
+        df = (df.sort_values("hora_local")
+                .drop_duplicates(subset=["uf", "mun", "zona"], keep="last"))
+    return df.reset_index(drop=True)
 
 
 def tse_a_ibge():
@@ -258,8 +283,22 @@ def main():
         print("[x] Falta la base de la 1ª vuelta (escrutinio_zonas_2026.csv).")
         sys.exit(1)
     live = cargar(LIVE)
+    if os.path.exists(LIVE) and live is None:
+        print("[!] CSV 2T ilegible (posible escritura en curso); se conserva la última proyección.")
+        return
 
     nac, m = payload_ambito(base, live, "BR")
+
+    prev = 0.0
+    if os.path.exists(OUT):
+        try:
+            prev = float(json.load(open(OUT, encoding="utf-8")).get("escrutado_pct") or 0.0)
+        except (OSError, ValueError):
+            prev = 0.0
+    if nac["escrutado"] + 0.01 < prev:
+        print(f"[!] Escrutado nuevo {nac['escrutado']:.2f}% < anterior {prev:.2f}%; "
+              f"se conserva la última proyección.")
+        return
     estados = []
     for uf in ESTADOS:
         bu = base[base["uf"] == uf.upper()]
