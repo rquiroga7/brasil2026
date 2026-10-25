@@ -153,10 +153,14 @@
         <div class="val" id="escrutado">–</div>
         <div class="small" id="electores">–</div>
       </div>
-      <div class="card"><h3 id="h_lula">Proyectado · Lula</h3>
-        <div class="val lula" id="p_lula">–</div><div class="small" id="p_lula_v">–</div></div>
-      <div class="card"><h3 id="h_flavio">Proyectado · Flavio</h3>
-        <div class="val flavio" id="p_flavio">–</div><div class="small" id="p_flavio_v">–</div></div>
+      <div class="card"><h3 id="h_lula">Proyectado Lula</h3>
+        <div class="val lula" id="p_lula">–</div>
+        <div class="small" id="p_lula_v">–</div>
+        <div class="small" id="m_lula" style="margin-top:4px">–</div></div>
+      <div class="card"><h3 id="h_flavio">Proyectado Flavio</h3>
+        <div class="val flavio" id="p_flavio">–</div>
+        <div class="small" id="p_flavio_v">–</div>
+        <div class="small" id="m_flavio" style="margin-top:4px">–</div></div>
       <div class="card"><h3>Proyectado · Otros</h3>
         <div class="val otros" id="p_otros">–</div><div class="small" id="p_otros_v">–</div></div>
     </div>
@@ -363,17 +367,19 @@ function pintarNacional() {
   ctrl.className = "pill" + ((datos.estado_control || "").includes("INCERTEZA") ? " warn" : "");
 
   const nombres = { hybrid: "Proyección swing-híbrida", scht_ng: "Proyección swing-jerárquica", v1: "Proyección estratificada" };
-  const etiq = { hybrid: "swing-híbrida", scht_ng: "swing-jerárquica", v1: "estratificada" };
+  const etiq = { hybrid: "swing-híbrido", scht_ng: "swing-jerárquico", v1: "estratificado" };
   $("metodo_nombre").textContent = "· método " + (nombres[metodo] || metodo);
-  $("h_lula").textContent = "Proyectado · Lula (" + (etiq[metodo] || metodo) + ")";
-  $("h_flavio").textContent = "Proyectado · Flavio (" + (etiq[metodo] || metodo) + ")";
+  $("h_lula").textContent = "Proyectado Lula";
+  $("h_flavio").textContent = "Proyectado Flavio";
   $("p_lula").textContent = fmtPct(b.lula && b.lula.pct);
   $("p_flavio").textContent = fmtPct(b.flavio && b.flavio.pct);
   $("p_otros").textContent = fmtPct(b.otros && b.otros.pct);
   $("p_lula_v").textContent = (b.lula ? fmtNum(b.lula.votos) + " votos" : "–") +
-    (b.lula && b.lula.p5 != null ? "  [p5–p95: " + b.lula.p5.toFixed(1) + "–" + b.lula.p95.toFixed(1) + "%]" : "");
+    (b.lula && b.lula.p5 != null ? " [" + b.lula.p5.toFixed(1) + "–" + b.lula.p95.toFixed(1) + "%]" : "");
   $("p_flavio_v").textContent = (b.flavio ? fmtNum(b.flavio.votos) + " votos" : "–") +
-    (b.flavio && b.flavio.p5 != null ? "  [p5–p95: " + b.flavio.p5.toFixed(1) + "–" + b.flavio.p95.toFixed(1) + "%]" : "");
+    (b.flavio && b.flavio.p5 != null ? " [" + b.flavio.p5.toFixed(1) + "–" + b.flavio.p95.toFixed(1) + "%]" : "");
+  $("m_lula").textContent = "Método proyección: " + (etiq[metodo] || metodo);
+  $("m_flavio").textContent = "Método proyección: " + (etiq[metodo] || metodo);
   $("p_otros_v").textContent = b.otros ? fmtNum(b.otros.votos) + " votos" : "–";
   pintarGanador();
   barChart("chart_nacional", b);
