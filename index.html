@@ -58,50 +58,56 @@
   canvas { max-height:300px; }
   footer { color:var(--muted); font-size:.78rem; margin-top:1rem; }
   code { background:rgba(127,127,127,.15); padding:.1rem .3rem; border-radius:4px; }
-.share-card { border:2px solid var(--line); border-radius:16px; padding:18px 20px;
-  background:var(--card); box-shadow:0 8px 26px rgba(0,0,0,.08); max-width:560px; width:100%; }
+.share-card { border:2px solid #444; border-radius:20px; padding:20px 22px;
+  background:var(--card); box-shadow:0 8px 26px rgba(0,0,0,.08); max-width:600px; width:100%; }
 .sc-head { display:flex; justify-content:space-between; align-items:center; gap:8px;
-  font-size:.78rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
-.sc-sub { font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted);
-  margin:12px 0 6px; }
-.sc-bar { display:flex; height:56px; border-radius:12px; overflow:hidden; font-weight:800;
-  color:#fff; font-size:1rem; }
+  font-size:.9rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
+.sc-sub { font-size:.82rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted);
+  margin:14px 0 7px; }
+.sc-bar { display:flex; height:64px; border-radius:12px; overflow:hidden; font-weight:800;
+  color:#fff; font-size:1.15rem; }
 .sc-bar span { display:flex; align-items:center; justify-content:center; min-width:0;
   transition:width .4s ease; white-space:nowrap; overflow:hidden; }
-.sc-result { font-size:1.45rem; font-weight:800; line-height:1.25; }
-.sc-cand { display:flex; align-items:center; gap:12px; margin-top:10px; }
-.sc-face { width:52px; height:52px; border-radius:50%; object-fit:cover;
-  border:2px solid var(--line); flex:none; }
+.sc-result { font-size:1.6rem; font-weight:800; line-height:1.25; }
+.sc-cand { display:flex; align-items:center; gap:14px; margin-top:12px; }
+.sc-face { width:60px; height:60px; border-radius:50%; object-fit:cover;
+  border:2px solid #444; flex:none; }
 .sc-line { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
-.sc-name { font-weight:800; font-size:1.15rem; }
-.sc-pct { font-weight:800; font-size:1.45rem; }
-.sc-ci { color:var(--muted); font-size:.85rem; }
+.sc-name { font-weight:800; font-size:1.4rem; }
+.sc-pct { font-weight:800; font-size:2rem; }
+.sc-cand.lula .sc-name, .sc-cand.lula .sc-pct { color:#E11B22; }
+.sc-cand.flavio .sc-name, .sc-cand.flavio .sc-pct { color:#4C8DFF; }
+.sc-ci { color:var(--muted); font-size:.95rem; }
 .sc-foot { display:flex; flex-wrap:wrap; gap:6px 14px; justify-content:space-between;
-  margin-top:14px; padding-top:10px; border-top:1px solid var(--line); font-size:.7rem;
+  margin-top:16px; padding-top:12px; border-top:1px solid var(--line); font-size:.8rem;
   color:var(--muted); }
-.btn-export { margin-top:10px; padding:8px 14px; border:1px solid var(--line); border-radius:8px;
-  background:var(--card); cursor:pointer; font-size:.8rem; }
-@media (max-width:480px) {
-  .sc-bar { height:44px; font-size:.9rem; }
-  .sc-face { width:44px; height:44px; }
-  .sc-pct { font-size:1.15rem; }
-  .share-card { padding:14px; }
-}
-.exporting { position:fixed; left:-10000px; top:0; width:1200px; height:900px;
-  box-sizing:border-box; padding:56px; background:#fff; border:none; border-radius:0;
-  box-shadow:none; max-width:none; display:flex; flex-direction:column;
-  justify-content:space-between; }
-.exporting .sc-bar { height:110px; font-size:1.8rem; }
-.exporting .sc-pct { font-size:2.8rem; }
-.exporting .sc-name { font-size:2rem; }
-.exporting .sc-head, .exporting .sc-sub, .exporting .sc-foot { font-size:1.1rem; }
-.exporting .sc-face { width:96px; height:96px; }
-.exporting .sc-result { font-size:2.6rem; }
-.sc-prob { display:flex; justify-content:space-between; font-weight:700; font-size:.95rem;
+.sc-prob { display:flex; justify-content:space-between; font-weight:700; font-size:1rem;
   margin-top:6px; }
 .sc-prob .plula { color:#E11B22; }
 .sc-prob .pflavio { color:#4C8DFF; }
-.exporting .sc-prob { font-size:1.3rem; }
+.btn-export { margin-top:10px; padding:8px 14px; border:1px solid var(--line); border-radius:8px;
+  background:var(--card); cursor:pointer; font-size:.8rem; }
+@media (max-width:480px) {
+  .sc-bar { height:48px; font-size:.95rem; }
+  .sc-face { width:46px; height:46px; }
+  .sc-pct { font-size:1.3rem; }
+  .sc-name { font-size:1.1rem; }
+  .share-card { padding:14px; }
+}
+.exporting { position:fixed; left:-10000px; top:0; width:1200px; height:900px;
+  box-sizing:border-box; padding:64px; background:#ffffff; color:#1a1a1a;
+  border:8px solid #444; border-radius:28px; box-shadow:none; max-width:none;
+  display:flex; flex-direction:column; justify-content:space-between; }
+.exporting .sc-head { font-size:1.35rem; }
+.exporting .sc-sub { font-size:1.2rem; }
+.exporting .sc-bar { height:130px; font-size:2.2rem; }
+.exporting .sc-prob { font-size:1.7rem; }
+.exporting .sc-name { font-size:2.8rem; }
+.exporting .sc-pct { font-size:3.6rem; }
+.exporting .sc-ci { font-size:1.6rem; }
+.exporting .sc-face { width:120px; height:120px; }
+.exporting .sc-foot { font-size:1.25rem; }
+.exporting .sc-result { font-size:2.6rem; }
 </style>
 </head>
 <body>
@@ -139,7 +145,7 @@
       </div>
       <div class="sc-prob"><span id="sc_prob_lula" class="plula">–</span><span id="sc_prob_flavio" class="pflavio">–</span></div>
       <div class="sc-sub">Proyección de resultado final</div>
-      <div class="sc-cand">
+      <div class="sc-cand lula">
         <img class="sc-face" src="assets/lula.jpg" alt="Lula">
         <div class="sc-line">
           <span class="sc-name">Lula</span>
@@ -147,7 +153,7 @@
           <span class="sc-ci" id="ci_lula"></span>
         </div>
       </div>
-      <div class="sc-cand">
+      <div class="sc-cand flavio">
         <img class="sc-face" src="assets/flavio.jpg" alt="Flávio">
         <div class="sc-line">
           <span class="sc-name">Flávio</span>
@@ -379,6 +385,10 @@ async function exportarTarjeta() {
   const clone = card.cloneNode(true);
   clone.id = "export_card";
   clone.classList.add("exporting");
+  clone.style.setProperty("--text", "#1a1a1a");
+  clone.style.setProperty("--muted", "#666666");
+  clone.style.setProperty("--line", "#444444");
+  clone.style.setProperty("--card", "#ffffff");
   document.body.appendChild(clone);
   await Promise.all(Array.from(clone.querySelectorAll("img")).map((img) =>
     img.complete ? Promise.resolve()
