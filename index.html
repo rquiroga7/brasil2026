@@ -100,10 +100,6 @@
       <button data-ronda="2t" class="active">2ª vuelta</button>
       <button data-ronda="1t">1ª vuelta</button>
     </div>
-    <div class="tabs">
-      <button data-tab="proj" class="active">Proyecci</button>
-      <button data-tab="crudo">Crudo (en vivo)</button>
-  </div>
 
   <!-- ================= TAB: PROYECCIÓN ================= -->
   <section id="tab-proj">
@@ -119,7 +115,7 @@
     <div class="share-card" id="panel_ganador">
       <div class="sc-head">
         <span id="sc_ronda">Brasil 2026 · 2ª vuelta</span>
-        <span id="sc_metodo">Quiroga</span>
+        <span id="sc_metodo">Swing-híbrida</span>
       </div>
       <div class="sc-sub">Probabilidad de ganar</div>
       <div class="sc-bar" id="bar_ganador">
@@ -205,53 +201,12 @@
     </div>
   </section>
 
-  <!-- ================= TAB: CRUDO ================= -->
-  <section id="tab-crudo" class="hidden">
-    <div class="grid">
-      <div class="card"><h3>Escrutado</h3>
-        <div class="val" id="c_escrutado">–</div>
-        <div class="small" id="c_votos">–</div></div>
-      <div class="card"><h3>Crudo · Lula</h3>
-        <div class="val lula" id="c_lula">–</div><div class="small" id="c_lula_v">–</div></div>
-      <div class="card"><h3>Crudo · Flavio</h3>
-        <div class="val flavio" id="c_flavio">–</div><div class="small" id="c_flavio_v">–</div></div>
-      <div class="card"><h3>Crudo · Otros</h3>
-        <div class="val otros" id="c_otros">–</div><div class="small" id="c_otros_v">–</div></div>
-    </div>
-
-    <div class="panel">
-      <h2>Resultado crudo nacional <span class="small">(votos ya escrutados, % sobre válidos)</span></h2>
-      <canvas id="chart_crudo"></canvas>
-    </div>
-
-    <div class="panel">
-      <div class="toolbar">
-        <h2 style="margin:0">Por estado (crudo)</h2>
-        <input id="buscar_c" placeholder="Buscar estado…" style="max-width:180px">
-        <select id="orden_c">
-          <option value="escrutado">Ordenar: % escrutado</option>
-          <option value="lula">Ordenar: % Lula</option>
-          <option value="flavio">Ordenar: % Flavio</option>
-          <option value="votos">Ordenar: votos</option>
-          <option value="nombre">Ordenar: nombre</option>
-        </select>
-      </div>
-      <table>
-        <thead><tr>
-          <th>Estado</th><th class="num">Escrutado</th>
-          <th>Crudo (Lula / Flavio / Otros)</th>
-          <th class="num">Lula</th><th class="num">Flavio</th>
-        </tr></thead>
-        <tbody id="tabla_crudo_body"></tbody>
-      </table>
-    </div>
-  </section>
 
   <footer>
     Proyección no oficial con fines de análisis.
-    <b>Quiroga</b>: share 2022 por zona + swing observado por estado, sobre válidos (excluye nulos y blancos), intervalo p5–p95.
-    <b>Etchenique</b>: electores 2026 × % asistencia 2022, fallback municipio → estado → nacional (excluye nulos).
-    <b>Crudo</b>: votos efectivamente escrutados por la TSE (sin proyección).
+    <b>Swing-híbrida</b>: combina la proyección estratificada y el swing uniforme, con más peso a la estratificada al inicio.
+    <b>Swing-jerárquica</b>: modelo logit-swing jerárquico usando como base la vuelta anterior.
+    <b>Estratificada</b>: electores × participación, fallback municipio → estado → nacional.
   </footer>
 
 <script src="config.js"></script>
@@ -541,7 +496,7 @@ async function refrescar() {
       + (datos.swing_disponible ? "" : " · swing no disponible");
     if (!datos.swing_disponible) { metodo = "v1"; marcarSegmento(); }
     $("h_metodo_ext").textContent = ronda === "2t" ? "Método Schteingart" : "Método Etchenique";
-    pintarNacional(); pintarTabla(); pintarCrudo(); pintarTablaCrudo(); pintarSeries();
+    pintarNacional(); pintarTabla(); pintarSeries();
   } catch (e) {
     $("actualizado").textContent = "sin datos todavía (" + e.message + ")";
   }
@@ -552,12 +507,6 @@ function marcarSegmento() {
 }
 document.querySelectorAll("#seg_metodo button").forEach((b) =>
   b.addEventListener("click", () => { metodo = b.dataset.m; marcarSegmento(); pintarNacional(); pintarTabla(); }));
-document.querySelectorAll(".tabs button").forEach((b) =>
-  b.addEventListener("click", () => {
-    document.querySelectorAll(".tabs button").forEach((x) => x.classList.toggle("active", x === b));
-    $("tab-proj").classList.toggle("hidden", b.dataset.tab !== "proj");
-    $("tab-crudo").classList.toggle("hidden", b.dataset.tab !== "crudo");
-  }));
 document.querySelectorAll("#seg_ronda button").forEach((b) =>
   b.addEventListener("click", () => {
     ronda = b.dataset.ronda;
@@ -566,9 +515,7 @@ document.querySelectorAll("#seg_ronda button").forEach((b) =>
     refrescar();
   }));
 $("orden").addEventListener("change", (e) => { ordenActual = e.target.value; pintarTabla(); });
-$("orden_c").addEventListener("change", (e) => { ordenCrudo = e.target.value; pintarTablaCrudo(); });
 $("buscar").addEventListener("input", pintarTabla);
-$("buscar_c").addEventListener("input", pintarTablaCrudo);
 $("btn_export").addEventListener("click", exportarTarjeta);
 
 refrescar();
