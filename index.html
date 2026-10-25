@@ -69,6 +69,13 @@
 .sc-bar span { display:flex; align-items:center; justify-content:center; min-width:0;
   transition:width .4s ease; white-space:nowrap; overflow:hidden; }
 .sc-result { font-size:1.45rem; font-weight:800; line-height:1.25; }
+.sc-cand { display:flex; align-items:center; gap:12px; margin-top:10px; }
+.sc-face { width:52px; height:52px; border-radius:50%; object-fit:cover;
+  border:2px solid var(--line); flex:none; }
+.sc-line { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+.sc-name { font-weight:800; font-size:1.15rem; }
+.sc-pct { font-weight:800; font-size:1.45rem; }
+.sc-ci { color:var(--muted); font-size:.85rem; }
 .sc-foot { display:flex; flex-wrap:wrap; gap:6px 14px; justify-content:space-between;
   margin-top:14px; padding-top:10px; border-top:1px solid var(--line); font-size:.7rem;
   color:var(--muted); }
@@ -76,7 +83,8 @@
   background:var(--card); cursor:pointer; font-size:.8rem; }
 @media (max-width:480px) {
   .sc-bar { height:44px; font-size:.9rem; }
-  .sc-result { font-size:1.1rem; }
+  .sc-face { width:44px; height:44px; }
+  .sc-pct { font-size:1.15rem; }
   .share-card { padding:14px; }
 }
 </style>
@@ -119,7 +127,22 @@
         <span id="bar_flavio" style="background:#4C8DFF"></span>
       </div>
       <div class="sc-sub">Proyección de resultado final</div>
-      <div class="sc-result" id="resultado_final">–</div>
+      <div class="sc-cand">
+        <img class="sc-face" src="assets/lula.jpg" alt="Lula">
+        <div class="sc-line">
+          <span class="sc-name">Lula</span>
+          <span class="sc-pct" id="res_lula">–</span>
+          <span class="sc-ci" id="ci_lula"></span>
+        </div>
+      </div>
+      <div class="sc-cand">
+        <img class="sc-face" src="assets/flavio.jpg" alt="Flávio">
+        <div class="sc-line">
+          <span class="sc-name">Flávio</span>
+          <span class="sc-pct" id="res_flavio">–</span>
+          <span class="sc-ci" id="ci_flavio"></span>
+        </div>
+      </div>
       <div class="sc-foot">
         <span id="sc_escrutado">–</span>
         <span id="sc_actualizado">–</span>
@@ -320,9 +343,10 @@ function pintarGanador() {
   $("bar_flavio").style.width = (pf * 100).toFixed(1) + "%";
   $("bar_lula").textContent = "Lula " + (pl * 100).toFixed(0) + "%";
   $("bar_flavio").textContent = "Flávio " + (pf * 100).toFixed(0) + "%";
-  $("resultado_final").textContent =
-    "Lula " + b.lula.pct.toFixed(1) + "% (" + band.l[0].toFixed(1) + "–" + band.l[1].toFixed(1) + ")  ·  " +
-    "Flávio " + b.flavio.pct.toFixed(1) + "% (" + band.f[0].toFixed(1) + "–" + band.f[1].toFixed(1) + ")";
+  $("res_lula").textContent = b.lula.pct.toFixed(1) + "%";
+  $("ci_lula").textContent = "(" + band.l[0].toFixed(1) + "–" + band.l[1].toFixed(1) + ")";
+  $("res_flavio").textContent = b.flavio.pct.toFixed(1) + "%";
+  $("ci_flavio").textContent = "(" + band.f[0].toFixed(1) + "–" + band.f[1].toFixed(1) + ")";
   $("sc_metodo").textContent = ({ scht_ng: "Schteingart", swing: "Quiroga", v1: "Etchenique" })[metodo] || metodo;
   $("sc_ronda").textContent = "Brasil 2026 · " + (ronda === "2t" ? "2ª vuelta" : "1ª vuelta");
   $("sc_escrutado").textContent = "Escrutado: " + fmtPct(datos.escrutado_pct);
@@ -331,7 +355,7 @@ function pintarGanador() {
 
 async function exportarTarjeta() {
   const card = $("panel_ganador");
-  const canvas = await html2canvas(card, { backgroundColor: "#ffffff", scale: 2 });
+  const canvas = await html2canvas(card, { backgroundColor: "#ffffff", scale: 2, useCORS: true });
   const W = 1200, H = 900;
   const out = document.createElement("canvas");
   out.width = W; out.height = H;
