@@ -62,6 +62,7 @@
   background:var(--card); box-shadow:0 8px 26px rgba(0,0,0,.08); max-width:600px; width:100%; }
 .sc-head { display:flex; justify-content:space-between; align-items:center; gap:8px;
   font-size:.9rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
+#sc_metodo { text-transform:none; text-align:right; }
 .sc-block { border:1px solid #bbb; border-radius:12px; padding:12px 14px; margin-top:12px; }
 .sc-sub { font-size:1rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted);
   margin:0 0 8px; }
@@ -380,7 +381,9 @@ function pintarGanador() {
   $("ci_lula").textContent = "(" + band.l[0].toFixed(1) + "–" + band.l[1].toFixed(1) + ")";
   $("res_flavio").textContent = b.flavio.pct.toFixed(1) + "%";
   $("ci_flavio").textContent = "(" + band.f[0].toFixed(1) + "–" + band.f[1].toFixed(1) + ")";
-  $("sc_metodo").textContent = ({ hybrid: "Swing-híbrida", scht_ng: "Swing-jerárquica", v1: "Estratificada" })[metodo] || metodo;
+  $("sc_metodo").textContent = ({ hybrid: "Método de Proyección Swing-híbrido",
+    scht_ng: "Método de Proyección Swing-jerárquico",
+    v1: "Método de Proyección Estratificado" })[metodo] || metodo;
   $("sc_ronda").textContent = "Brasil 2026 · " + (ronda === "2t" ? "2ª vuelta" : "1ª vuelta");
   $("sc_escrutado").textContent = "Escrutado: " + fmtPct(datos.escrutado_pct);
   $("sc_actualizado").textContent = "Actualizado: " + fechaLocal(datos.actualizado);
