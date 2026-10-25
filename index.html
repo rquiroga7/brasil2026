@@ -271,14 +271,17 @@ function _fecha(t) {
 function horaLocal(t) {
   const d = _fecha(t);
   if (!d) return "";
-  try { return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", timeZone: TZ_USUARIO }); }
-  catch (_) { return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); }
+  try { return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: TZ_USUARIO }); }
+  catch (_) { return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false }); }
 }
 function fechaLocal(t) {
   const d = _fecha(t);
   if (!d) return String(t == null ? "–" : t);
-  try { return d.toLocaleString([], { dateStyle: "short", timeStyle: "medium", timeZone: TZ_USUARIO }); }
-  catch (_) { return d.toLocaleString([], { dateStyle: "short", timeStyle: "medium" }); }
+  const opt = { year: "numeric", month: "2-digit", day: "2-digit",
+                hour: "2-digit", minute: "2-digit", second: "2-digit",
+                hour12: false, timeZone: TZ_USUARIO };
+  try { return d.toLocaleString([], opt); }
+  catch (_) { delete opt.timeZone; return d.toLocaleString([], opt); }
 }
 const _blendCand = (a, b, w) => {
   if (!a || !b) return a || b || {};
@@ -546,8 +549,13 @@ function bloqueSerie(s) {
   return s.schteingart || s.proyectado || {};
 }
 
+function serieFiltrada() {
+  const s = (datos && datos.serie) || [];
+  if (ronda !== "2t") return s;
+  return s.filter((p) => (p.escrutado || 0) > 0 || (p.crudo && p.crudo.lula_votos > 0));
+}
 function pintarSeries() {
-  const serie = (datos && datos.serie) || [];
+  const serie = serieFiltrada();
   if (!chartRaw) chartRaw = new Chart($("chart_raw"), { type: "line", data: { labels: [], datasets: construirDatasets([], "crudo") }, options: opcionesLinea() });
   if (!chartProj) chartProj = new Chart($("chart_proj"), { type: "line", data: { labels: [], datasets: construirDatasets([], "proj") }, options: opcionesLinea() });
   const labels = serie.map((s) => horaLocal(s.t));
@@ -558,7 +566,7 @@ function pintarSeries() {
 }
 
 function pintarProbSeries() {
-  const serie = (datos && datos.serie) || [];
+  const serie = serieFiltrada();
   if (!chartProb) {
     const opt = opcionesLinea();
     opt.scales.y = { min: 0, max: 100, ticks: { callback: (v) => v + "%" } };

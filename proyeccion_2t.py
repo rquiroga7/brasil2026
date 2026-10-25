@@ -169,7 +169,7 @@ def quiroga(m):
     m["sw_use"] = m["uf"].map(sw_uf).fillna(nac)
     # votos válidos esperados 2T: factor de participación observado
     factor = m.loc[cnt, "l2"].sum() + m.loc[cnt, "f2"].sum()
-    factor = factor / max(m.loc[cnt, "val1"].sum(), 1) if cnt.any() else 0.0
+    factor = factor / max((m.loc[cnt, "val1"] * m.loc[cnt, "f"]).sum(), 1) if cnt.any() else 0.0
     e = m["val1"] * (factor if factor > 0 else 1.0)
     q2p = expit(logit(q1) + m["sw_use"])
     l2p = np.where(cnt, m["l2"], e * q2p)
@@ -327,6 +327,10 @@ def main():
     serie = []
     if os.path.exists(HIST):
         serie = json.load(open(HIST, encoding="utf-8"))
+    # el gráfico de evolución arranca con los primeros votos contados,
+    # no con el punto previo de 0 votos (p. ej. 15:56)
+    serie = [p for p in serie
+             if float((p.get("crudo") or {}).get("lula_votos", 0) or 0) > 0]
 
     def _punto(b, con_votos=False):
         p = {"lula": b["lula"]["pct"], "flavio": b["flavio"]["pct"],
