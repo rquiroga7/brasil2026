@@ -149,7 +149,22 @@ def quiroga(m):
     q2p = expit(logit(q1) + m["sw_use"])
     l2p = np.where(cnt, m["l2"], e * q2p)
     f2p = np.where(cnt, m["f2"], e * (1 - q2p))
-    return float(np.nansum(l2p)), float(np.nansum(f2p))
+    # v1 (estratificada): media de lo contado por estado; fallback al base 1T
+    est_q2 = {}
+    for uf, g in m.groupby("uf"):
+        gg = g[g["f"] > 0]
+        tot = gg["l2"].sum() + gg["f2"].sum()
+        if tot > 0:
+            est_q2[uf] = float(gg["l2"].sum() / tot)
+    q2v1 = m["uf"].map(est_q2).astype(float).to_numpy()
+    cnta = np.asarray(cnt)
+    q2v1 = np.where(cnta, np.asarray(q2, dtype=float), q2v1)
+    q2v1 = np.where(np.isnan(q2v1), np.asarray(q1, dtype=float), q2v1)
+    en = np.asarray(e, dtype=float)
+    l1p = np.where(cnta, m["l2"].to_numpy(), en * q2v1)
+    f1p = np.where(cnta, m["f2"].to_numpy(), en * (1 - q2v1))
+    return (float(np.nansum(l2p)), float(np.nansum(f2p)),
+            float(np.nansum(l1p)), float(np.nansum(f1p)))
 
 
 def schteingart(base, live):
@@ -205,15 +220,21 @@ def payload_ambito(base, live, nombre="BR"):
     val_cnt = l_cnt + f_cnt
     br, nu = m["br2"].sum(), m["nu2"].sum()
     total_cnt = val_cnt + br + nu
-    ql, qf = quiroga(m)
+    ql, qf, l_v1, f_v1 = quiroga(m)
     scht = schteingart(base, live) if (live is not None and not live.empty) else None
     esc = 100 * m["sec_cnt"].sum() / max(m["sec_tot"].sum(), 1)
     b_swing = bloque(ql, qf, ql + qf)
+    b_v1 = bloque(l_v1, f_v1, l_v1 + f_v1)
     b_scht = bloque(scht[0], scht[1], scht[0] + scht[1]) if scht else dict(b_swing)
+    w = 0.5 * max(0.0, 1.0 - min(esc, 100) / 10.0)
+    b_hyb = bloque(w * l_v1 + (1 - w) * ql, w * f_v1 + (1 - w) * qf,
+                   w * (l_v1 + f_v1) + (1 - w) * (ql + qf))
     out = {
         "escrutado": round(esc, 2),
         "crudo": crudo_bloque(l_cnt, f_cnt, val_cnt, total_cnt, br, nu),
         "swing": b_swing,
+        "v1": b_v1,
+        "hybrid": b_hyb,
         "schteingart": b_scht,
     }
     out["scht_ng"] = b_scht
@@ -222,7 +243,7 @@ def payload_ambito(base, live, nombre="BR"):
     x = min(max(esc, 0.0), 100.0) / 100.0
     hw = max(float(np.interp(x, xs, cs)), 0.05 * (1 - x))
     mrg = float(np.interp(x, xs, ms))
-    for blk in (out["crudo"], out["swing"], out["schteingart"]):
+    for blk in (out["crudo"], out["swing"], out["v1"], out["hybrid"], out["schteingart"]):
         blk["margen_p90"] = round(mrg, 2)
         for c in ("lula", "flavio"):
             p = blk[c]["pct"]
@@ -259,7 +280,8 @@ def main():
             "electores_habilitados": int(bu["electores"].sum()),
             "validos_proyectados": int(eu["swing"]["lula"]["votos"] + eu["swing"]["flavio"]["votos"]),
             "1t": blk1,
-            "crudo": eu["crudo"], "swing": eu["swing"], "schteingart": eu["schteingart"],
+            "crudo": eu["crudo"], "swing": eu["swing"], "v1": eu["v1"],
+            "hybrid": eu["hybrid"], "schteingart": eu["schteingart"],
             "scht_ng": eu["scht_ng"],
         })
 

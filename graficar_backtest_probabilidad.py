@@ -45,8 +45,8 @@ def main():
         ax = fig.add_subplot(gs[i // 2, i % 2])
         axes.append(ax)
         margen = np.interp(bt["escrutado_pct"] / 100.0, xs, ms)
-        # p90 calibrado + piso prudente que se angosta con el escrutado (menos confianza)
-        sd = np.hypot(margen / 1.645, 0.5 + 1.5 * (1 - bt["escrutado_pct"] / 100.0))
+        # p90 del margen inflado por el factor t-Student (df≈4) para no ser sobreconfiado
+        sd = (margen / 1.645) * 1.4
         for c, etiqueta in (("lula", "Lula"), ("flavio", "Flávio")):
             marg = (bt[f"{m_}_lula"] - bt[f"{m_}_flavio"]) if c == "lula" else \
                 (bt[f"{m_}_flavio"] - bt[f"{m_}_lula"])
@@ -92,9 +92,9 @@ def main():
     fig.suptitle("Brasil — 1ª vuelta 2026: probabilidad de victoria según método y % escrutado",
                  fontsize=12)
     fig.tight_layout(rect=[0, 0.03, 1, 0.96])
-    ep.mpl(fig, "Probabilidad implícita = normal sobre el margen proyectado, con el error p90 "
-                "del margen calibrado en la 1T (modelo de error). Híbrido = w·Etchenique + "
-                "(1−w)·Quiroga, w = 0.5·max(0, 1 − esc/10).")
+    ep.mpl(fig, "Probabilidad implícita = normal sobre el margen proyectado, con el p90 del "
+                "margen calibrado en la 1T e inflado por un factor t-Student (df≈4). "
+                "Híbrido = w·Etchenique + (1−w)·Quiroga, w = 0.5·max(0, 1 − esc/10).")
     fig.savefig(OUT, dpi=140, bbox_inches="tight")
     plt.close(fig)
     print(f"[OK] {OUT}")
