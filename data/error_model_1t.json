@@ -1,0 +1,121 @@
+{
+  "puntos": [
+    {
+      "esc": 1.0,
+      "cand_mean": 1.596,
+      "cand_p90": 2.083,
+      "cand_max": 2.23,
+      "margen_p90": 3.589,
+      "margen_max": 3.67
+    },
+    {
+      "esc": 2.0,
+      "cand_mean": 1.616,
+      "cand_p90": 2.281,
+      "cand_max": 2.47,
+      "margen_p90": 4.217,
+      "margen_max": 4.67
+    },
+    {
+      "esc": 5.0,
+      "cand_mean": 0.684,
+      "cand_p90": 1.211,
+      "cand_max": 1.33,
+      "margen_p90": 2.229,
+      "margen_max": 2.49
+    },
+    {
+      "esc": 10.0,
+      "cand_mean": 0.434,
+      "cand_p90": 1.083,
+      "cand_max": 1.23,
+      "margen_p90": 1.779,
+      "margen_max": 2.25
+    },
+    {
+      "esc": 15.0,
+      "cand_mean": 0.466,
+      "cand_p90": 0.894,
+      "cand_max": 1.02,
+      "margen_p90": 1.655,
+      "margen_max": 1.76
+    },
+    {
+      "esc": 20.0,
+      "cand_mean": 0.525,
+      "cand_p90": 0.849,
+      "cand_max": 0.87,
+      "margen_p90": 1.474,
+      "margen_max": 1.51
+    },
+    {
+      "esc": 30.0,
+      "cand_mean": 0.584,
+      "cand_p90": 0.813,
+      "cand_max": 0.96,
+      "margen_p90": 1.545,
+      "margen_max": 1.71
+    },
+    {
+      "esc": 40.0,
+      "cand_mean": 0.439,
+      "cand_p90": 0.717,
+      "cand_max": 0.85,
+      "margen_p90": 1.303,
+      "margen_max": 1.51
+    },
+    {
+      "esc": 50.0,
+      "cand_mean": 0.402,
+      "cand_p90": 0.628,
+      "cand_max": 0.74,
+      "margen_p90": 1.116,
+      "margen_max": 1.32
+    },
+    {
+      "esc": 60.0,
+      "cand_mean": 0.354,
+      "cand_p90": 0.556,
+      "cand_max": 0.64,
+      "margen_p90": 0.98,
+      "margen_max": 1.16
+    },
+    {
+      "esc": 70.0,
+      "cand_mean": 0.301,
+      "cand_p90": 0.43,
+      "cand_max": 0.5,
+      "margen_p90": 0.789,
+      "margen_max": 0.9
+    },
+    {
+      "esc": 80.0,
+      "cand_mean": 0.261,
+      "cand_p90": 0.332,
+      "cand_max": 0.36,
+      "margen_p90": 0.611,
+      "margen_max": 0.65
+    },
+    {
+      "esc": 90.0,
+      "cand_mean": 0.165,
+      "cand_p90": 0.22,
+      "cand_max": 0.22,
+      "margen_p90": 0.378,
+      "margen_max": 0.39
+    },
+    {
+      "esc": 100.0,
+      "cand_mean": 0.017,
+      "cand_p90": 0.03,
+      "cand_max": 0.03,
+      "margen_p90": 0.01,
+      "margen_max": 0.01
+    }
+  ],
+  "powerlaw": {
+    "a": 0.1381,
+    "b": 0.562
+  },
+  "nota": "Error observado en el backtest 1T 2026 (métodos v1/v2/scht/híbrido)."
+}

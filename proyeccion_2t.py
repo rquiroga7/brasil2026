@@ -33,6 +33,7 @@ BASE = rd.ruta("escrutinio_zonas_2026.csv")        # 1ª vuelta (base)
 LIVE = rd.ruta("escrutinio_zonas_2026_2t.csv")     # 2ª vuelta (en vivo)
 OUT = rd.ruta("datos_web_2t.json")
 HIST = rd.ruta("historico_2t.json")
+CAL = os.path.join(rd.REPO, "data", "error_model_1t.json")
 RAIZ = rd.REPO
 ESTADOS = ["ac", "al", "am", "ap", "ba", "ce", "df", "es", "go", "ma", "mg", "ms", "mt",
            "pa", "pb", "pe", "pi", "pr", "rj", "rn", "ro", "rr", "rs", "sc", "se", "sp",
@@ -47,6 +48,24 @@ def logit(p):
 def expit(x):
     x = np.asarray(x, dtype=float)
     return 1.0 / (1.0 + np.exp(-x))
+
+
+_MODELO = None
+
+
+def modelo_error():
+    """Tabla de error calibrada con el backtest 1T (data/error_model_1t.json)."""
+    global _MODELO
+    if _MODELO is None:
+        try:
+            d = json.load(open(CAL, encoding="utf-8"))
+            xs = [p["esc"] / 100.0 for p in d["puntos"]]
+            cs = [p["cand_p90"] for p in d["puntos"]]
+            ms = [p["margen_p90"] for p in d["puntos"]]
+            _MODELO = (xs, cs, ms)
+        except (OSError, ValueError, KeyError):
+            _MODELO = ([0.01, 1.0], [2.5, 0.03], [4.0, 0.01])
+    return _MODELO
 
 
 def cargar(path):
@@ -198,9 +217,13 @@ def payload_ambito(base, live, nombre="BR"):
         "schteingart": b_scht,
     }
     out["scht_ng"] = b_scht
-    # banda aproximada (se angosta con el escrutado) para el gráfico de ganador
-    hw = 0.5 + 4.0 * (1 - min(esc, 100) / 100)
+    # banda de incertidumbre calibrada con el error observado en la 1T
+    xs, cs, ms = modelo_error()
+    x = min(max(esc, 0.0), 100.0) / 100.0
+    hw = max(float(np.interp(x, xs, cs)), 0.05 * (1 - x))
+    mrg = float(np.interp(x, xs, ms))
     for blk in (out["crudo"], out["swing"], out["schteingart"]):
+        blk["margen_p90"] = round(mrg, 2)
         for c in ("lula", "flavio"):
             p = blk[c]["pct"]
             blk[c]["p5"] = round(max(0.0, p - hw), 2)
