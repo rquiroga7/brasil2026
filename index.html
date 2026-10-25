@@ -196,12 +196,10 @@
 
     <div class="panel">
       <h2>Evolución temporal</h2>
-      <h3 style="font-size:.85rem;color:var(--muted);margin:.2rem 0 .3rem">Datos Crudos</h3>
+      <h3 style="font-size:.85rem;color:var(--muted);margin:.2rem 0 .3rem">Datos crudos</h3>
       <canvas id="chart_raw"></canvas>
-      <h3 id="h_metodo_ext" style="font-size:.85rem;color:var(--muted);margin:.8rem 0 .3rem">Método Etchenique</h3>
-      <canvas id="chart_ext"></canvas>
-      <h3 style="font-size:.85rem;color:var(--muted);margin:.8rem 0 .3rem">Método Quiroga</h3>
-      <canvas id="chart_swing"></canvas>
+      <h3 id="h_metodo_proj" style="font-size:.85rem;color:var(--muted);margin:.8rem 0 .3rem">Proyección</h3>
+      <canvas id="chart_proj"></canvas>
     </div>
   </section>
 
@@ -222,8 +220,9 @@ const DATOS_URL_2T = (window.DATOS_URL_2T && window.DATOS_URL_2T.trim()) || "dat
 let ronda = "2t";
 const urlActual = () => (ronda === "2t" ? DATOS_URL_2T : DATOS_URL_1T);
 const COLORES = { lula: "#E11B22", flavio: "#4C8DFF", otros: "#8a8a8a" };
+const ETIQ_METODO = { hybrid: "swing-híbrido", scht_ng: "swing-jerárquico", v1: "estratificado" };
 let datos = null, metodo = "hybrid", ordenActual = "electores", ordenCrudo = "escrutado";
-let chartRaw = null, chartExt = null, chartSwing = null;
+let chartRaw = null, chartProj = null;
 
 const $ = (id) => document.getElementById(id);
 const fmtPct = (v) => (v == null ? "–" : Number(v).toFixed(2) + "%");
@@ -367,7 +366,7 @@ function pintarNacional() {
   ctrl.className = "pill" + ((datos.estado_control || "").includes("INCERTEZA") ? " warn" : "");
 
   const nombres = { hybrid: "Proyección swing-híbrida", scht_ng: "Proyección swing-jerárquica", v1: "Proyección estratificada" };
-  const etiq = { hybrid: "swing-híbrido", scht_ng: "swing-jerárquico", v1: "estratificado" };
+  const etiq = ETIQ_METODO;
   $("metodo_nombre").textContent = "· método " + (nombres[metodo] || metodo);
   $("h_lula").textContent = "Proyectado Lula";
   $("h_flavio").textContent = "Proyectado Flavio";
@@ -480,12 +479,28 @@ const opcionesLinea = () => ({ responsive: true, animation: false,
 function pintarSeries() {
   const serie = (datos && datos.serie) || [];
   if (!chartRaw) chartRaw = new Chart($("chart_raw"), { type: "line", data: { labels: [], datasets: construirDatasets([], "crudo") }, options: opcionesLinea() });
-  if (!chartExt) chartExt = new Chart($("chart_ext"), { type: "line", data: { labels: [], datasets: construirDatasets([], "proyectado") }, options: opcionesLinea() });
-  if (!chartSwing) chartSwing = new Chart($("chart_swing"), { type: "line", data: { labels: [], datasets: construirDatasets([], "swing") }, options: opcionesLinea() });
+  if (!chartProj) chartProj = new Chart($("chart_proj"), { type: "line", data: { labels: [], datasets: construirDatasets([], "proj") }, options: opcionesLinea() });
   const labels = serie.map((s) => etiqueta(s.t));
   chartRaw.data.labels = labels; chartRaw.data.datasets = construirDatasets(serie, "crudo"); chartRaw.update();
-  chartExt.data.labels = labels; chartExt.data.datasets = construirDatasets(serie, "proyectado"); chartExt.update();
-  chartSwing.data.labels = labels; chartSwing.data.datasets = construirDatasets(serie, "swing"); chartSwing.update();
+  const sp = serie.map((s) => {
+    let b;
+    if (metodo === "hybrid") {
+      if (s.hybrid) b = s.hybrid;
+      else {
+        const v1 = s.v1 || s.proyectado || {};
+        const v2 = s.swing || s.proyectado || {};
+        const w = 0.5 * Math.max(0, 1 - (s.escrutado || 0) / 10);
+        b = _blend(v1, v2, w);
+      }
+    } else if (metodo === "v1") {
+      b = s.v1 || s.proyectado || {};
+    } else {
+      b = s.schteingart || s.proyectado || {};
+    }
+    return { t: s.t, proj: b };
+  });
+  chartProj.data.labels = labels; chartProj.data.datasets = construirDatasets(sp, "proj"); chartProj.update();
+  $("h_metodo_proj").textContent = "Proyección — " + (ETIQ_METODO[metodo] || metodo);
 }
 
 // ---------- Orquestación ----------
@@ -501,7 +516,6 @@ async function refrescar() {
                                                    : "1ª vuelta · base 2022")
       + (datos.swing_disponible ? "" : " · swing no disponible");
     if (!datos.swing_disponible) { metodo = "v1"; marcarSegmento(); }
-    $("h_metodo_ext").textContent = ronda === "2t" ? "Método Schteingart" : "Método Etchenique";
     pintarNacional(); pintarTabla(); pintarSeries();
   } catch (e) {
     $("actualizado").textContent = "sin datos todavía (" + e.message + ")";
@@ -512,7 +526,7 @@ function marcarSegmento() {
   document.querySelectorAll("#seg_metodo button").forEach((b) => b.classList.toggle("active", b.dataset.m === metodo));
 }
 document.querySelectorAll("#seg_metodo button").forEach((b) =>
-  b.addEventListener("click", () => { metodo = b.dataset.m; marcarSegmento(); pintarNacional(); pintarTabla(); }));
+  b.addEventListener("click", () => { metodo = b.dataset.m; marcarSegmento(); pintarNacional(); pintarTabla(); pintarSeries(); }));
 document.querySelectorAll("#seg_ronda button").forEach((b) =>
   b.addEventListener("click", () => {
     ronda = b.dataset.ronda;

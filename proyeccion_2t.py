@@ -301,6 +301,8 @@ def main():
              "escrutado": nac["escrutado"],
              "crudo": _punto(nac["crudo"], True),
              "swing": _punto(nac["swing"]),
+             "v1": _punto(nac["v1"]),
+             "hybrid": _punto(nac["hybrid"]),
              "proyectado": _punto(nac["schteingart"])}
     if not serie or serie[-1].get("escrutado") != punto["escrutado"]:
         serie.append(punto)
