@@ -299,6 +299,8 @@ def main():
 
     punto = {"t": datetime.now().astimezone().isoformat(),
              "escrutado": nac["escrutado"],
+             "margen_p90": round(float(np.interp(nac["escrutado"] / 100.0, modelo_error()[0],
+                                                  modelo_error()[2])), 2),
              "crudo": _punto(nac["crudo"], True),
              "swing": _punto(nac["swing"]),
              "v1": _punto(nac["v1"]),

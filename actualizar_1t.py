@@ -19,11 +19,15 @@ import publicar_rodri as p
 
 URL = "https://raw.githubusercontent.com/rquiroga7/brasil2026/data/datos_web.json"
 CSV = os.path.join(rd.REPO, "plot", "backtest_timestamped.csv")
+MODEL = os.path.join(rd.REPO, "data", "error_model_1t.json")
 
 
 def main():
     d = requests.get(URL, timeout=30).json()
     bt = pd.read_csv(CSV).sort_values("escrutado_pct")
+    model = json.load(open(MODEL, encoding="utf-8"))["puntos"]
+    mx = [p["esc"] for p in model]
+    mm = [p["margen_p90"] for p in model]
     x = bt["escrutado_pct"].to_numpy(float)
     xi = np.arange(1, 101, 1)
 
@@ -43,6 +47,7 @@ def main():
     serie = []
     for k in range(len(xi)):
         serie.append({"t": times[idxs[k]], "escrutado": float(xi[k]),
+                      "margen_p90": round(float(np.interp(xi[k], mx, mm)), 2),
                       "crudo": blk(lc[k], fc[k]), "swing": blk(ls[k], fs[k]),
                       "proyectado": blk(lp[k], fp[k])})
     d["serie"] = serie

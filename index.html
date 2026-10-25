@@ -97,6 +97,11 @@
 .exporting .sc-head, .exporting .sc-sub, .exporting .sc-foot { font-size:1.1rem; }
 .exporting .sc-face { width:96px; height:96px; }
 .exporting .sc-result { font-size:2.6rem; }
+.sc-prob { display:flex; justify-content:space-between; font-weight:700; font-size:.95rem;
+  margin-top:6px; }
+.sc-prob .plula { color:#E11B22; }
+.sc-prob .pflavio { color:#4C8DFF; }
+.exporting .sc-prob { font-size:1.3rem; }
 </style>
 </head>
 <body>
@@ -132,6 +137,7 @@
         <span id="bar_lula" style="background:#E11B22"></span>
         <span id="bar_flavio" style="background:#4C8DFF"></span>
       </div>
+      <div class="sc-prob"><span id="sc_prob_lula" class="plula">–</span><span id="sc_prob_flavio" class="pflavio">–</span></div>
       <div class="sc-sub">Proyección de resultado final</div>
       <div class="sc-cand">
         <img class="sc-face" src="assets/lula.jpg" alt="Lula">
@@ -210,6 +216,8 @@
       <canvas id="chart_raw"></canvas>
       <h3 id="h_metodo_proj" style="font-size:.85rem;color:var(--muted);margin:.8rem 0 .3rem">Proyección</h3>
       <canvas id="chart_proj"></canvas>
+      <h3 id="h_metodo_prob" style="font-size:.85rem;color:var(--muted);margin:.8rem 0 .3rem">Probabilidad de victoria</h3>
+      <canvas id="chart_prob"></canvas>
     </div>
   </section>
 
@@ -232,12 +240,33 @@ const urlActual = () => (ronda === "2t" ? DATOS_URL_2T : DATOS_URL_1T);
 const COLORES = { lula: "#E11B22", flavio: "#4C8DFF", otros: "#8a8a8a" };
 const ETIQ_METODO = { hybrid: "swing-híbrido", scht_ng: "swing-jerárquico", v1: "estratificado" };
 let datos = null, metodo = "hybrid", ordenActual = "electores", ordenCrudo = "escrutado";
-let chartRaw = null, chartProj = null;
+let chartRaw = null, chartProj = null, chartProb = null;
 
 const $ = (id) => document.getElementById(id);
 const fmtPct = (v) => (v == null ? "–" : Number(v).toFixed(2) + "%");
 const fmtNum = (v) => (v == null ? "–" : Number(v).toLocaleString("es"));
-const etiqueta = (t) => { const p = String(t).split(" "); return p.length > 1 ? p[1] : String(t); };
+let TZ_USUARIO = "America/Manaus"; // GMT-4 (fallback si no se detecta la zona)
+try { TZ_USUARIO = Intl.DateTimeFormat().resolvedOptions().timeZone || TZ_USUARIO; } catch (_) {}
+function _fecha(t) {
+  const s = String(t == null ? "" : t).trim();
+  if (!s) return null;
+  let d;
+  if (/[zZ]|[+-]\d\d:?\d\d$/.test(s)) d = new Date(s);
+  else d = new Date(s.replace(" ", "T") + "-03:00"); // hora TSE (Brasília)
+  return isNaN(d) ? null : d;
+}
+function horaLocal(t) {
+  const d = _fecha(t);
+  if (!d) return "";
+  try { return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", timeZone: TZ_USUARIO }); }
+  catch (_) { return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); }
+}
+function fechaLocal(t) {
+  const d = _fecha(t);
+  if (!d) return String(t == null ? "–" : t);
+  try { return d.toLocaleString([], { dateStyle: "short", timeStyle: "medium", timeZone: TZ_USUARIO }); }
+  catch (_) { return d.toLocaleString([], { dateStyle: "short", timeStyle: "medium" }); }
+}
 const _blendCand = (a, b, w) => {
   if (!a || !b) return a || b || {};
   const f = (x, y) => (x != null && y != null) ? w * x + (1 - w) * y : (x != null ? x : y);
@@ -333,8 +362,8 @@ function pintarGanador() {
   const pf = 1 - pl;
   $("bar_lula").style.width = (pl * 100).toFixed(1) + "%";
   $("bar_flavio").style.width = (pf * 100).toFixed(1) + "%";
-  $("bar_lula").textContent = "Lula " + (pl * 100).toFixed(0) + "%";
-  $("bar_flavio").textContent = "Flávio " + (pf * 100).toFixed(0) + "%";
+  $("sc_prob_lula").textContent = "Lula " + (pl * 100).toFixed(0) + "%";
+  $("sc_prob_flavio").textContent = "Flávio " + (pf * 100).toFixed(0) + "%";
   $("res_lula").textContent = b.lula.pct.toFixed(1) + "%";
   $("ci_lula").textContent = "(" + band.l[0].toFixed(1) + "–" + band.l[1].toFixed(1) + ")";
   $("res_flavio").textContent = b.flavio.pct.toFixed(1) + "%";
@@ -342,7 +371,7 @@ function pintarGanador() {
   $("sc_metodo").textContent = ({ hybrid: "Swing-híbrida", scht_ng: "Swing-jerárquica", v1: "Estratificada" })[metodo] || metodo;
   $("sc_ronda").textContent = "Brasil 2026 · " + (ronda === "2t" ? "2ª vuelta" : "1ª vuelta");
   $("sc_escrutado").textContent = "Escrutado: " + fmtPct(datos.escrutado_pct);
-  $("sc_actualizado").textContent = "Actualizado: " + (datos.actualizado || "–");
+  $("sc_actualizado").textContent = "Actualizado: " + fechaLocal(datos.actualizado);
 }
 
 async function exportarTarjeta() {
@@ -486,31 +515,54 @@ const opcionesLinea = () => ({ responsive: true, animation: false,
          ticks: { callback: (v) => v + "%" } },
     x: { ticks: { maxTicksLimit: 8, maxRotation: 30 } } },
   plugins: { legend: { position: "bottom" } } });
+function bloqueSerie(s) {
+  if (metodo === "hybrid") {
+    if (s.hybrid) return s.hybrid;
+    const v1 = s.v1 || s.proyectado || {};
+    const v2 = s.swing || s.proyectado || {};
+    const w = 0.5 * Math.max(0, 1 - (s.escrutado || 0) / 10);
+    return _blend(v1, v2, w);
+  }
+  if (metodo === "v1") return s.v1 || s.proyectado || {};
+  return s.schteingart || s.proyectado || {};
+}
+
 function pintarSeries() {
   const serie = (datos && datos.serie) || [];
   if (!chartRaw) chartRaw = new Chart($("chart_raw"), { type: "line", data: { labels: [], datasets: construirDatasets([], "crudo") }, options: opcionesLinea() });
   if (!chartProj) chartProj = new Chart($("chart_proj"), { type: "line", data: { labels: [], datasets: construirDatasets([], "proj") }, options: opcionesLinea() });
-  const labels = serie.map((s) => etiqueta(s.t));
+  const labels = serie.map((s) => horaLocal(s.t));
   chartRaw.data.labels = labels; chartRaw.data.datasets = construirDatasets(serie, "crudo"); chartRaw.update();
-  const sp = serie.map((s) => {
-    let b;
-    if (metodo === "hybrid") {
-      if (s.hybrid) b = s.hybrid;
-      else {
-        const v1 = s.v1 || s.proyectado || {};
-        const v2 = s.swing || s.proyectado || {};
-        const w = 0.5 * Math.max(0, 1 - (s.escrutado || 0) / 10);
-        b = _blend(v1, v2, w);
-      }
-    } else if (metodo === "v1") {
-      b = s.v1 || s.proyectado || {};
-    } else {
-      b = s.schteingart || s.proyectado || {};
-    }
-    return { t: s.t, proj: b };
-  });
+  const sp = serie.map((s) => ({ t: s.t, proj: bloqueSerie(s) }));
   chartProj.data.labels = labels; chartProj.data.datasets = construirDatasets(sp, "proj"); chartProj.update();
   $("h_metodo_proj").textContent = "Proyección — " + (ETIQ_METODO[metodo] || metodo);
+}
+
+function pintarProbSeries() {
+  const serie = (datos && datos.serie) || [];
+  if (!chartProb) {
+    const opt = opcionesLinea();
+    opt.scales.y = { min: 0, max: 100, ticks: { callback: (v) => v + "%" } };
+    chartProb = new Chart($("chart_prob"), { type: "line", data: { labels: [], datasets: [] }, options: opt });
+  }
+  const labels = serie.map((s) => horaLocal(s.t));
+  const dL = [], dF = [];
+  for (const s of serie) {
+    const b = bloqueSerie(s);
+    if (!b || !b.lula || !b.flavio) { dL.push(null); dF.push(null); continue; }
+    const mp = (s.margen_p90 != null) ? s.margen_p90 : 2;
+    const sd = (mp / 1.645) * 1.4;
+    const m = b.lula.pct - b.flavio.pct;
+    const pl = 1 - normCdf(-m / sd);
+    dL.push(pl * 100); dF.push((1 - pl) * 100);
+  }
+  chartProb.data.labels = labels;
+  chartProb.data.datasets = [
+    { label: "P(Lula)", data: dL, borderColor: COLORES.lula, backgroundColor: COLORES.lula, borderWidth: 2, pointRadius: 0, tension: 0.15, spanGaps: true },
+    { label: "P(Flávio)", data: dF, borderColor: COLORES.flavio, backgroundColor: COLORES.flavio, borderWidth: 2, pointRadius: 0, tension: 0.15, spanGaps: true },
+  ];
+  chartProb.update();
+  $("h_metodo_prob").textContent = "Probabilidad de victoria — " + (ETIQ_METODO[metodo] || metodo);
 }
 
 // ---------- Orquestación ----------
@@ -521,12 +573,12 @@ async function refrescar() {
     const r = await fetch(URL + sep + "t=" + Date.now(), { cache: "no-store" });
     if (!r.ok) throw new Error("HTTP " + r.status);
     datos = await r.json();
-    $("actualizado").textContent = "actualizado " + (datos.actualizado || "–");
+    $("actualizado").textContent = "actualizado " + fechaLocal(datos.actualizado) + " (" + TZ_USUARIO + ")";
     $("nota_metodo").textContent = (ronda === "2t" ? "2ª vuelta · base 1ª vuelta 2026"
                                                    : "1ª vuelta · base 2022")
       + (datos.swing_disponible ? "" : " · swing no disponible");
     if (!datos.swing_disponible) { metodo = "v1"; marcarSegmento(); }
-    pintarNacional(); pintarTabla(); pintarSeries();
+    pintarNacional(); pintarTabla(); pintarSeries(); pintarProbSeries();
   } catch (e) {
     $("actualizado").textContent = "sin datos todavía (" + e.message + ")";
   }
@@ -536,7 +588,7 @@ function marcarSegmento() {
   document.querySelectorAll("#seg_metodo button").forEach((b) => b.classList.toggle("active", b.dataset.m === metodo));
 }
 document.querySelectorAll("#seg_metodo button").forEach((b) =>
-  b.addEventListener("click", () => { metodo = b.dataset.m; marcarSegmento(); pintarNacional(); pintarTabla(); pintarSeries(); }));
+  b.addEventListener("click", () => { metodo = b.dataset.m; marcarSegmento(); pintarNacional(); pintarTabla(); pintarSeries(); pintarProbSeries(); }));
 document.querySelectorAll("#seg_ronda button").forEach((b) =>
   b.addEventListener("click", () => {
     ronda = b.dataset.ronda;
