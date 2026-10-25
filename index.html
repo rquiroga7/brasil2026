@@ -112,6 +112,11 @@
 .exporting .sc-foot { font-size:1.25rem; }
 .exporting .sc-result { font-size:2.6rem; }
 .ronda-badge{display:inline-block;margin-left:10px;padding:4px 11px;border-radius:999px;font-size:.44em;font-weight:700;letter-spacing:.3px;vertical-align:middle;background:#e8f0fe;border:1px solid #b6cdf7;color:#1a4fa0;white-space:nowrap}
+.aviso{display:flex;gap:10px;align-items:flex-start;margin:10px 0;padding:12px 14px;border-radius:10px;border:1px solid #e0b04a;background:#fff7e0;color:#6b4700;font-size:13.5px;line-height:1.45}
+.aviso[hidden]{display:none}
+.aviso .aviso_icon{font-size:18px;line-height:1.1}
+.aviso b{color:#7a4a00}
+.sc-warn{color:#a15c00;font-weight:700}
 </style>
 </head>
 <body>
@@ -135,6 +140,11 @@
         <button data-m="v1">Proyección estratificada</button>
       </div>
       <span class="small" id="nota_metodo"></span>
+    </div>
+
+    <div id="aviso_escrutado" class="aviso" hidden>
+      <span class="aviso_icon">⚠</span>
+      <div><b>Escrutado bajo:</b> <span id="aviso_escrutado_txt"></span></div>
     </div>
 
     <div class="share-card" id="panel_ganador">
@@ -172,6 +182,7 @@
       <div class="sc-foot">
         <span id="sc_escrutado">–</span>
         <span id="sc_actualizado">–</span>
+        <span id="sc_aviso" class="sc-warn" hidden>⚠ preliminar &lt;10%</span>
         <span>rquiroga7.github.io/brasil2026</span>
       </div>
     </div>
@@ -608,6 +619,17 @@ async function refrescar() {
     const r = await fetch(URL + sep + "t=" + Date.now(), { cache: "no-store" });
     if (!r.ok) throw new Error("HTTP " + r.status);
     datos = await r.json();
+    const _esc = Number(datos.escrutado_pct || 0);
+    const _av = $("aviso_escrutado");
+    if (_av) {
+      _av.hidden = _esc >= 10;
+      if (_esc < 10) {
+        $("aviso_escrutado_txt").textContent =
+          "solo " + _esc.toFixed(2) + "% de las secciones. La proyección es preliminar y poco fiable hasta superar el 10%; tómala con cautela.";
+      }
+    }
+    const _scAv = $("sc_aviso");
+    if (_scAv) _scAv.hidden = _esc >= 10;
     $("actualizado").textContent = "actualizado " + fechaLocal(datos.actualizado) + " (" + TZ_USUARIO + ")";
     $("nota_metodo").textContent = (ronda === "2t" ? "2ª vuelta · base 1ª vuelta 2026"
                                                    : "1ª vuelta · base 2022")
