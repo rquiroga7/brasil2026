@@ -62,8 +62,9 @@
   background:var(--card); box-shadow:0 8px 26px rgba(0,0,0,.08); max-width:600px; width:100%; }
 .sc-head { display:flex; justify-content:space-between; align-items:center; gap:8px;
   font-size:.9rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
-.sc-sub { font-size:.82rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted);
-  margin:14px 0 7px; }
+.sc-block { border:1px solid #bbb; border-radius:12px; padding:12px 14px; margin-top:12px; }
+.sc-sub { font-size:1rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted);
+  margin:0 0 8px; }
 .sc-bar { display:flex; height:64px; border-radius:12px; overflow:hidden; font-weight:800;
   color:#fff; font-size:1.15rem; }
 .sc-bar span { display:flex; align-items:center; justify-content:center; min-width:0;
@@ -99,7 +100,8 @@
   border:8px solid #444; border-radius:28px; box-shadow:none; max-width:none;
   display:flex; flex-direction:column; justify-content:space-between; }
 .exporting .sc-head { font-size:1.35rem; }
-.exporting .sc-sub { font-size:1.2rem; }
+.exporting .sc-block { border-width:2px; border-color:#999; border-radius:16px; padding:18px 22px; }
+.exporting .sc-sub { font-size:1.6rem; margin-bottom:12px; }
 .exporting .sc-bar { height:130px; font-size:2.2rem; }
 .exporting .sc-prob { font-size:1.7rem; }
 .exporting .sc-name { font-size:2.8rem; }
@@ -138,27 +140,31 @@
         <span id="sc_ronda">Brasil 2026 · 2ª vuelta</span>
         <span id="sc_metodo">Swing-híbrida</span>
       </div>
-      <div class="sc-sub">Probabilidad de ganar</div>
-      <div class="sc-bar" id="bar_ganador">
-        <span id="bar_lula" style="background:#E11B22"></span>
-        <span id="bar_flavio" style="background:#4C8DFF"></span>
-      </div>
-      <div class="sc-prob"><span id="sc_prob_lula" class="plula">–</span><span id="sc_prob_flavio" class="pflavio">–</span></div>
-      <div class="sc-sub">Proyección de resultado final</div>
-      <div class="sc-cand lula">
-        <img class="sc-face" src="assets/lula.jpg" alt="Lula">
-        <div class="sc-line">
-          <span class="sc-name">Lula</span>
-          <span class="sc-pct" id="res_lula">–</span>
-          <span class="sc-ci" id="ci_lula"></span>
+      <div class="sc-block">
+        <div class="sc-sub">Probabilidad de ganar</div>
+        <div class="sc-bar" id="bar_ganador">
+          <span id="bar_lula" style="background:#E11B22"></span>
+          <span id="bar_flavio" style="background:#4C8DFF"></span>
         </div>
+        <div class="sc-prob"><span id="sc_prob_lula" class="plula">–</span><span id="sc_prob_flavio" class="pflavio">–</span></div>
       </div>
-      <div class="sc-cand flavio">
-        <img class="sc-face" src="assets/flavio.jpg" alt="Flávio">
-        <div class="sc-line">
-          <span class="sc-name">Flávio</span>
-          <span class="sc-pct" id="res_flavio">–</span>
-          <span class="sc-ci" id="ci_flavio"></span>
+      <div class="sc-block">
+        <div class="sc-sub">Proyección de resultado final</div>
+        <div class="sc-cand lula">
+          <img class="sc-face" src="assets/lula.jpg" alt="Lula">
+          <div class="sc-line">
+            <span class="sc-name">Lula</span>
+            <span class="sc-pct" id="res_lula">–</span>
+            <span class="sc-ci" id="ci_lula"></span>
+          </div>
+        </div>
+        <div class="sc-cand flavio">
+          <img class="sc-face" src="assets/flavio.jpg" alt="Flávio">
+          <div class="sc-line">
+            <span class="sc-name">Flávio</span>
+            <span class="sc-pct" id="res_flavio">–</span>
+            <span class="sc-ci" id="ci_flavio"></span>
+          </div>
         </div>
       </div>
       <div class="sc-foot">
