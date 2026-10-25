@@ -7,6 +7,7 @@ línea proyectada de cada candidato lleva una banda sombreada p5–p95.
 """
 
 import os
+import json
 
 import numpy as np
 import pandas as pd
@@ -21,6 +22,7 @@ import estilo_plot as ep
 import graficar_backtest_candidatos as g
 
 CSV = os.path.join(rd.REPO, "plot", "backtest_timestamped.csv")
+CAL = os.path.join(rd.REPO, "data", "proyeccion-calibracion.json")
 OUT = os.path.join(rd.REPO, "plot", "backtest_timestamped_candidatos_band.png")
 FINAL = {"lula": 45.16, "flavio": 47.03}
 METODOS = [("v1", "Etchenique"), ("v2", "Quiroga"), ("scht", "Schteingart"), ("hyb", "Híbrido")]
@@ -32,8 +34,13 @@ def main():
     w = np.clip(1.0 - bt["escrutado_pct"] / 10.0, 0.0, 1.0)
     bt["hyb_lula"] = w * bt["v1_lula"] + (1 - w) * bt["v2_lula"]
     bt["hyb_flavio"] = w * bt["v1_flavio"] + (1 - w) * bt["v2_flavio"]
-    # media banda p5-p95 (puntos), se angosta con el escrutado
-    hw = 0.5 + 4.0 * (1.0 - bt["escrutado_pct"] / 100.0)
+    # banda p5-p95 = error p90 de candidato calibrado (2018→2022), con piso que
+    # se angosta con el escrutado y llega a 0 en el 100%.
+    cal = json.load(open(CAL, encoding="utf-8"))["1"]
+    cx = np.array([c["contado"] for c in cal])
+    cc = np.array([c["cand"] for c in cal])
+    hw = np.maximum(np.interp(bt["escrutado_pct"] / 100.0, cx, cc),
+                    0.4 * (1.0 - bt["escrutado_pct"] / 100.0))
 
     vals = []
     for m_, _ in METODOS:
@@ -96,8 +103,9 @@ def main():
     fig.suptitle("Brasil — 1ª vuelta 2026: % proyectado (con banda p5–p95) vs. crudo por candidato y método",
                  fontsize=12)
     fig.tight_layout(rect=[0, 0.03, 1, 0.96])
-    ep.mpl(fig, "Banda p5–p95 aproximada (se angosta con el escrutado). Híbrido = w·Etchenique + "
-                "(1−w)·Quiroga, w = max(0, 1 − esc/10). Carga real por marcas de tiempo del TSE.")
+    ep.mpl(fig, "Banda p5–p95 = error p90 de candidato calibrado en la prueba 2018→2022, "
+                "con el piso prudente del modelo. Híbrido = w·Etchenique + (1−w)·Quiroga, "
+                "w = max(0, 1 − esc/10).")
     fig.savefig(OUT, dpi=140, bbox_inches="tight")
     plt.close(fig)
     print(f"[OK] {OUT}")
