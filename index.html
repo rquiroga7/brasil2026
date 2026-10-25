@@ -245,7 +245,7 @@ let chartRaw = null, chartProj = null, chartProb = null;
 const $ = (id) => document.getElementById(id);
 const fmtPct = (v) => (v == null ? "–" : Number(v).toFixed(2) + "%");
 const fmtNum = (v) => (v == null ? "–" : Number(v).toLocaleString("es"));
-let TZ_USUARIO = "America/Manaus"; // GMT-4 (fallback si no se detecta la zona)
+let TZ_USUARIO = "America/Sao_Paulo"; // GMT-3 (fallback si no se detecta la zona)
 try { TZ_USUARIO = Intl.DateTimeFormat().resolvedOptions().timeZone || TZ_USUARIO; } catch (_) {}
 function _fecha(t) {
   const s = String(t == null ? "" : t).trim();
