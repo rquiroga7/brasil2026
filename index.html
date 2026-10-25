@@ -87,6 +87,16 @@
   .sc-pct { font-size:1.15rem; }
   .share-card { padding:14px; }
 }
+.exporting { position:fixed; left:-10000px; top:0; width:1200px; height:900px;
+  box-sizing:border-box; padding:56px; background:#fff; border:none; border-radius:0;
+  box-shadow:none; max-width:none; display:flex; flex-direction:column;
+  justify-content:space-between; }
+.exporting .sc-bar { height:110px; font-size:1.8rem; }
+.exporting .sc-pct { font-size:2.8rem; }
+.exporting .sc-name { font-size:2rem; }
+.exporting .sc-head, .exporting .sc-sub, .exporting .sc-foot { font-size:1.1rem; }
+.exporting .sc-face { width:96px; height:96px; }
+.exporting .sc-result { font-size:2.6rem; }
 </style>
 </head>
 <body>
@@ -337,18 +347,18 @@ function pintarGanador() {
 
 async function exportarTarjeta() {
   const card = $("panel_ganador");
-  const canvas = await html2canvas(card, { backgroundColor: "#ffffff", scale: 2, useCORS: true });
-  const W = 1200, H = 900;
-  const out = document.createElement("canvas");
-  out.width = W; out.height = H;
-  const ctx = out.getContext("2d");
-  ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, W, H);
-  const r = Math.min(W / canvas.width, H / canvas.height) * 0.92;
-  const w = canvas.width * r, h = canvas.height * r;
-  ctx.drawImage(canvas, (W - w) / 2, (H - h) / 2, w, h);
+  const clone = card.cloneNode(true);
+  clone.id = "export_card";
+  clone.classList.add("exporting");
+  document.body.appendChild(clone);
+  await Promise.all(Array.from(clone.querySelectorAll("img")).map((img) =>
+    img.complete ? Promise.resolve()
+      : new Promise((res) => { img.onload = res; img.onerror = res; })));
+  const canvas = await html2canvas(clone, { backgroundColor: "#ffffff", scale: 2, useCORS: true });
+  document.body.removeChild(clone);
   const a = document.createElement("a");
   a.download = "brasil2026_proyeccion.png";
-  a.href = out.toDataURL("image/png");
+  a.href = canvas.toDataURL("image/png");
   a.click();
 }
 
