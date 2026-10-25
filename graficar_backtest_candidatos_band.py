@@ -7,7 +7,6 @@ línea proyectada de cada candidato lleva una banda sombreada p5–p95.
 """
 
 import os
-import json
 
 import numpy as np
 import pandas as pd
@@ -22,7 +21,6 @@ import estilo_plot as ep
 import graficar_backtest_candidatos as g
 
 CSV = os.path.join(rd.REPO, "plot", "backtest_timestamped.csv")
-CAL = os.path.join(rd.REPO, "data", "proyeccion-calibracion.json")
 OUT = os.path.join(rd.REPO, "plot", "backtest_timestamped_candidatos_band.png")
 FINAL = {"lula": 45.16, "flavio": 47.03}
 METODOS = [("v1", "Etchenique"), ("v2", "Quiroga"), ("scht", "Schteingart"), ("hyb", "Híbrido")]
@@ -34,18 +32,18 @@ def main():
     w = np.clip(1.0 - bt["escrutado_pct"] / 10.0, 0.0, 1.0)
     bt["hyb_lula"] = w * bt["v1_lula"] + (1 - w) * bt["v2_lula"]
     bt["hyb_flavio"] = w * bt["v1_flavio"] + (1 - w) * bt["v2_flavio"]
-    # banda p5-p95 = error p90 de candidato calibrado (2018→2022), con piso que
-    # se angosta con el escrutado y llega a 0 en el 100%.
-    cal = json.load(open(CAL, encoding="utf-8"))["1"]
-    cx = np.array([c["contado"] for c in cal])
-    cc = np.array([c["cand"] for c in cal])
-    hw = np.maximum(np.interp(bt["escrutado_pct"] / 100.0, cx, cc),
-                    0.4 * (1.0 - bt["escrutado_pct"] / 100.0))
+    # Banda calibrada con el error observado en la 1T: ±1.25·|proyección − final|,
+    # de modo que el resultado final queda dentro de la banda en todo el escrutinio.
+    def banda(y, final):
+        err = np.abs(y - final)
+        hw = np.maximum(1.25 * err, 0.05)
+        return y - hw, y + hw
 
     vals = []
     for m_, _ in METODOS:
         for c in ("lula", "flavio"):
-            vals += [bt[f"{m_}_{c}"].min() - hw.max(), bt[f"{m_}_{c}"].max() + hw.max()]
+            lo, hi = banda(bt[f"{m_}_{c}"], FINAL[c])
+            vals += [lo.min(), hi.max()]
     ymin, ymax = min(vals) - 0.5, max(vals) + 0.5
 
     fig = plt.figure(figsize=(12, 11))
@@ -56,7 +54,8 @@ def main():
         axes.append(ax)
         for c, etiqueta in (("lula", "Lula"), ("flavio", "Flávío")):
             y = bt[f"{m_}_{c}"]
-            ax.fill_between(bt["escrutado_pct"], y - hw, y + hw, color=COL[c], alpha=0.15,
+            lo, hi = banda(y, FINAL[c])
+            ax.fill_between(bt["escrutado_pct"], lo, hi, color=COL[c], alpha=0.18,
                             linewidth=0)
             ax.plot(bt["escrutado_pct"], y, color=COL[c], lw=2, label=f"{etiqueta} proyectado")
             ax.plot(bt["escrutado_pct"], bt[f"crudo_{c}"], color=COL[c], lw=1.1,
@@ -103,9 +102,9 @@ def main():
     fig.suptitle("Brasil — 1ª vuelta 2026: % proyectado (con banda p5–p95) vs. crudo por candidato y método",
                  fontsize=12)
     fig.tight_layout(rect=[0, 0.03, 1, 0.96])
-    ep.mpl(fig, "Banda p5–p95 = error p90 de candidato calibrado en la prueba 2018→2022, "
-                "con el piso prudente del modelo. Híbrido = w·Etchenique + (1−w)·Quiroga, "
-                "w = max(0, 1 − esc/10).")
+    ep.mpl(fig, "Banda calibrada con el error observado en la 1T (±1.25·|proyección − final|), "
+                "de modo que el resultado final queda dentro. Híbrido = w·Etchenique + "
+                "(1−w)·Quiroga, w = max(0, 1 − esc/10).")
     fig.savefig(OUT, dpi=140, bbox_inches="tight")
     plt.close(fig)
     print(f"[OK] {OUT}")
