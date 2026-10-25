@@ -44,7 +44,7 @@ def carga_real():
 
 def main():
     bt = pd.read_csv(CSV).sort_values("escrutado_pct").reset_index(drop=True)
-    w = np.clip(1.0 - bt["escrutado_pct"] / 10.0, 0.0, 1.0)
+    w = 0.5 * np.clip(1.0 - bt["escrutado_pct"] / 10.0, 0.0, 1.0)
     bt["hyb_lula"] = w * bt["v1_lula"] + (1 - w) * bt["v2_lula"]
     bt["hyb_flavio"] = w * bt["v1_flavio"] + (1 - w) * bt["v2_flavio"]
 
@@ -107,7 +107,7 @@ def main():
     fig.suptitle("Brasil — 1ª vuelta 2026: % proyectado vs. crudo por candidato y método",
                  fontsize=12)
     fig.tight_layout(rect=[0, 0.03, 1, 0.96])
-    ep.mpl(fig, "Híbrido = w·Etchenique + (1−w)·Quiroga, con w = max(0, 1 − esc/10). "
+    ep.mpl(fig, "Híbrido = w·Etchenique + (1−w)·Quiroga, con w = 0.5·max(0, 1 − esc/10). "
                 "Backtest con la carga real (marcas de tiempo del TSE).")
     fig.savefig(OUT, dpi=140, bbox_inches="tight")
     plt.close(fig)

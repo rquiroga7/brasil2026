@@ -30,7 +30,7 @@ COL = {"lula": "#E11B22", "flavio": "#2C5FBF"}
 
 def main():
     bt = pd.read_csv(CSV).sort_values("escrutado_pct").reset_index(drop=True)
-    w = np.clip(1.0 - bt["escrutado_pct"] / 10.0, 0.0, 1.0)
+    w = 0.5 * np.clip(1.0 - bt["escrutado_pct"] / 10.0, 0.0, 1.0)
     bt["hyb_lula"] = w * bt["v1_lula"] + (1 - w) * bt["v2_lula"]
     bt["hyb_flavio"] = w * bt["v1_flavio"] + (1 - w) * bt["v2_flavio"]
 
@@ -45,7 +45,8 @@ def main():
         ax = fig.add_subplot(gs[i // 2, i % 2])
         axes.append(ax)
         margen = np.interp(bt["escrutado_pct"] / 100.0, xs, ms)
-        sd = np.maximum(margen / 1.645, 0.05)
+        # p90 calibrado + piso prudente que se angosta con el escrutado (menos confianza)
+        sd = np.hypot(margen / 1.645, 0.5 + 1.5 * (1 - bt["escrutado_pct"] / 100.0))
         for c, etiqueta in (("lula", "Lula"), ("flavio", "Flávio")):
             marg = (bt[f"{m_}_lula"] - bt[f"{m_}_flavio"]) if c == "lula" else \
                 (bt[f"{m_}_flavio"] - bt[f"{m_}_lula"])
@@ -93,7 +94,7 @@ def main():
     fig.tight_layout(rect=[0, 0.03, 1, 0.96])
     ep.mpl(fig, "Probabilidad implícita = normal sobre el margen proyectado, con el error p90 "
                 "del margen calibrado en la 1T (modelo de error). Híbrido = w·Etchenique + "
-                "(1−w)·Quiroga, w = max(0, 1 − esc/10).")
+                "(1−w)·Quiroga, w = 0.5·max(0, 1 − esc/10).")
     fig.savefig(OUT, dpi=140, bbox_inches="tight")
     plt.close(fig)
     print(f"[OK] {OUT}")

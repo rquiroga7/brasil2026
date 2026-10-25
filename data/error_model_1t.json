@@ -2,7 +2,7 @@
   "puntos": [
     {
       "esc": 1.0,
-      "cand_mean": 1.596,
+      "cand_mean": 1.367,
       "cand_p90": 2.083,
       "cand_max": 2.23,
       "margen_p90": 3.589,
@@ -10,15 +10,15 @@
     },
     {
       "esc": 2.0,
-      "cand_mean": 1.616,
+      "cand_mean": 1.266,
       "cand_p90": 2.281,
       "cand_max": 2.47,
-      "margen_p90": 4.217,
+      "margen_p90": 4.133,
       "margen_max": 4.67
     },
     {
       "esc": 5.0,
-      "cand_mean": 0.684,
+      "cand_mean": 0.704,
       "cand_p90": 1.211,
       "cand_max": 1.33,
       "margen_p90": 2.229,
@@ -114,8 +114,8 @@
     }
   ],
   "powerlaw": {
-    "a": 0.1381,
-    "b": 0.562
+    "a": 0.1481,
+    "b": 0.4753
   },
   "nota": "Error observado en el backtest 1T 2026 (métodos v1/v2/scht/híbrido)."
 }

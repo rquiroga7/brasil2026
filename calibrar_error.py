@@ -25,7 +25,7 @@ MET = ["v1", "v2", "scht", "hyb"]
 
 def main():
     bt = pd.read_csv(CSV).sort_values("escrutado_pct").reset_index(drop=True)
-    w = np.clip(1 - bt["escrutado_pct"] / 10, 0, 1)
+    w = 0.5 * np.clip(1 - bt["escrutado_pct"] / 10, 0, 1)
     bt["hyb_lula"] = w * bt["v1_lula"] + (1 - w) * bt["v2_lula"]
     bt["hyb_flavio"] = w * bt["v1_flavio"] + (1 - w) * bt["v2_flavio"]
 

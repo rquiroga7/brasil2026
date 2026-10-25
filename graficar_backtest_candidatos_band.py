@@ -29,7 +29,7 @@ COL = {"lula": "#E11B22", "flavio": "#2C5FBF"}
 
 def main():
     bt = pd.read_csv(CSV).sort_values("escrutado_pct").reset_index(drop=True)
-    w = np.clip(1.0 - bt["escrutado_pct"] / 10.0, 0.0, 1.0)
+    w = 0.5 * np.clip(1.0 - bt["escrutado_pct"] / 10.0, 0.0, 1.0)
     bt["hyb_lula"] = w * bt["v1_lula"] + (1 - w) * bt["v2_lula"]
     bt["hyb_flavio"] = w * bt["v1_flavio"] + (1 - w) * bt["v2_flavio"]
     # Banda calibrada con el error observado en la 1T: ±1.25·|proyección − final|,
@@ -104,7 +104,7 @@ def main():
     fig.tight_layout(rect=[0, 0.03, 1, 0.96])
     ep.mpl(fig, "Banda calibrada con el error observado en la 1T (±1.25·|proyección − final|), "
                 "de modo que el resultado final queda dentro. Híbrido = w·Etchenique + "
-                "(1−w)·Quiroga, w = max(0, 1 − esc/10).")
+                "(1−w)·Quiroga, w = 0.5·max(0, 1 − esc/10).")
     fig.savefig(OUT, dpi=140, bbox_inches="tight")
     plt.close(fig)
     print(f"[OK] {OUT}")

@@ -335,9 +335,10 @@ function pintarGanador() {
   const band = bandaDe(b, nat);
   const sl = Math.max((band.l[1] - band.l[0]) / (2 * 1.645), 0.1);
   const sf = Math.max((band.f[1] - band.f[0]) / (2 * 1.645), 0.1);
+  const piso = 0.5 + 1.5 * (1 - (datos.escrutado_pct || 0) / 100);
   const sm = (b.margen_p90 != null)
-    ? Math.max(b.margen_p90 / 1.645, 0.1)
-    : Math.hypot(sl, sf);
+    ? Math.hypot(b.margen_p90 / 1.645, piso)
+    : Math.hypot(sl, sf, piso);
   const m = b.lula.pct - b.flavio.pct;
   const pl = 1 - normCdf(-m / sm);
   const pf = 1 - pl;
