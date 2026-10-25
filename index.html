@@ -58,6 +58,27 @@
   canvas { max-height:300px; }
   footer { color:var(--muted); font-size:.78rem; margin-top:1rem; }
   code { background:rgba(127,127,127,.15); padding:.1rem .3rem; border-radius:4px; }
+.share-card { border:2px solid var(--line); border-radius:16px; padding:18px 20px;
+  background:var(--card); box-shadow:0 8px 26px rgba(0,0,0,.08); max-width:560px; width:100%; }
+.sc-head { display:flex; justify-content:space-between; align-items:center; gap:8px;
+  font-size:.78rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); }
+.sc-sub { font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted);
+  margin:12px 0 6px; }
+.sc-bar { display:flex; height:56px; border-radius:12px; overflow:hidden; font-weight:800;
+  color:#fff; font-size:1rem; }
+.sc-bar span { display:flex; align-items:center; justify-content:center; min-width:0;
+  transition:width .4s ease; white-space:nowrap; overflow:hidden; }
+.sc-result { font-size:1.45rem; font-weight:800; line-height:1.25; }
+.sc-foot { display:flex; flex-wrap:wrap; gap:6px 14px; justify-content:space-between;
+  margin-top:14px; padding-top:10px; border-top:1px solid var(--line); font-size:.7rem;
+  color:var(--muted); }
+.btn-export { margin-top:10px; padding:8px 14px; border:1px solid var(--line); border-radius:8px;
+  background:var(--card); cursor:pointer; font-size:.8rem; }
+@media (max-width:480px) {
+  .sc-bar { height:44px; font-size:.9rem; }
+  .sc-result { font-size:1.1rem; }
+  .share-card { padding:14px; }
+}
 </style>
 </head>
 <body>
@@ -81,13 +102,31 @@
     <div class="toolbar">
       <div class="seg" id="seg_metodo">
         <button data-m="swing" class="active">Quiroga</button>
-        <button data-m="scht_ng">Schteingart sin gate</button>
-        <button data-m="schteingart">Schteingart</button>
-        <button data-m="v4">Swing por estado (v4)</button>
+        <button data-m="scht_ng">Schteingart</button>
         <button data-m="v1">Etchenique</button>
       </div>
       <span class="small" id="nota_metodo"></span>
     </div>
+
+    <div class="share-card" id="panel_ganador">
+      <div class="sc-head">
+        <span id="sc_ronda">Brasil 2026 · 2ª vuelta</span>
+        <span id="sc_metodo">Quiroga</span>
+      </div>
+      <div class="sc-sub">Probabilidad de ganar</div>
+      <div class="sc-bar" id="bar_ganador">
+        <span id="bar_lula" style="background:#E11B22"></span>
+        <span id="bar_flavio" style="background:#4C8DFF"></span>
+      </div>
+      <div class="sc-sub">Proyección de resultado final</div>
+      <div class="sc-result" id="resultado_final">–</div>
+      <div class="sc-foot">
+        <span id="sc_escrutado">–</span>
+        <span id="sc_actualizado">–</span>
+        <span>rquiroga7.github.io/brasil2026</span>
+      </div>
+    </div>
+    <button id="btn_export" class="btn-export">Descargar imagen (4:3)</button>
 
     <div class="grid">
       <div class="card">
@@ -193,6 +232,7 @@
 
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script>
 const DATOS_URL_1T = (window.DATOS_URL && window.DATOS_URL.trim()) || "datos_web.json";
 const DATOS_URL_2T = (window.DATOS_URL_2T && window.DATOS_URL_2T.trim()) || "datos_web_2t.json";
@@ -244,6 +284,67 @@ function barChart(canvasId, b) {
 }
 
 // ---------- Proyección ----------
+function normCdf(x) {
+  const t = 1 / (1 + 0.2316419 * Math.abs(x));
+  const d = 0.3989423 * Math.exp(-x * x / 2);
+  const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+  return x > 0 ? 1 - p : p;
+}
+
+function bandaDe(b, nat) {
+  if (b && b.lula && b.lula.p5 != null && b.lula.p95 != null && b.flavio && b.flavio.p5 != null) {
+    return { l: [b.lula.p5, b.lula.p95], f: [b.flavio.p5, b.flavio.p95] };
+  }
+  const sw = nat && nat.swing;
+  if (sw && sw.lula && sw.lula.p5 != null) {
+    const hl = (sw.lula.p95 - sw.lula.p5) / 2, hf = (sw.flavio.p95 - sw.flavio.p5) / 2;
+    return { l: [b.lula.pct - hl, b.lula.pct + hl], f: [b.flavio.pct - hf, b.flavio.pct + hf] };
+  }
+  return { l: [b.lula.pct - 2, b.lula.pct + 2], f: [b.flavio.pct - 2, b.flavio.pct + 2] };
+}
+
+function pintarGanador() {
+  if (!datos) return;
+  const nat = datos.nacional || {};
+  const b = bloqueMetodo(nat, metodo) || {};
+  if (!b.lula || !b.flavio) return;
+  const band = bandaDe(b, nat);
+  const sl = Math.max((band.l[1] - band.l[0]) / (2 * 1.645), 0.1);
+  const sf = Math.max((band.f[1] - band.f[0]) / (2 * 1.645), 0.1);
+  const sm = Math.hypot(sl, sf);
+  const m = b.lula.pct - b.flavio.pct;
+  const pl = 1 - normCdf(-m / sm);
+  const pf = 1 - pl;
+  $("bar_lula").style.width = (pl * 100).toFixed(1) + "%";
+  $("bar_flavio").style.width = (pf * 100).toFixed(1) + "%";
+  $("bar_lula").textContent = "Lula " + (pl * 100).toFixed(0) + "%";
+  $("bar_flavio").textContent = "Flávio " + (pf * 100).toFixed(0) + "%";
+  $("resultado_final").textContent =
+    "Lula " + b.lula.pct.toFixed(1) + "% (" + band.l[0].toFixed(1) + "–" + band.l[1].toFixed(1) + ")  ·  " +
+    "Flávio " + b.flavio.pct.toFixed(1) + "% (" + band.f[0].toFixed(1) + "–" + band.f[1].toFixed(1) + ")";
+  $("sc_metodo").textContent = ({ scht_ng: "Schteingart", swing: "Quiroga", v1: "Etchenique" })[metodo] || metodo;
+  $("sc_ronda").textContent = "Brasil 2026 · " + (ronda === "2t" ? "2ª vuelta" : "1ª vuelta");
+  $("sc_escrutado").textContent = "Escrutado: " + fmtPct(datos.escrutado_pct);
+  $("sc_actualizado").textContent = "Actualizado: " + (datos.actualizado || "–");
+}
+
+async function exportarTarjeta() {
+  const card = $("panel_ganador");
+  const canvas = await html2canvas(card, { backgroundColor: "#ffffff", scale: 2 });
+  const W = 1200, H = 900;
+  const out = document.createElement("canvas");
+  out.width = W; out.height = H;
+  const ctx = out.getContext("2d");
+  ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, W, H);
+  const r = Math.min(W / canvas.width, H / canvas.height) * 0.92;
+  const w = canvas.width * r, h = canvas.height * r;
+  ctx.drawImage(canvas, (W - w) / 2, (H - h) / 2, w, h);
+  const a = document.createElement("a");
+  a.download = "brasil2026_proyeccion.png";
+  a.href = out.toDataURL("image/png");
+  a.click();
+}
+
 function pintarNacional() {
   if (!datos) return;
   const nat = datos.nacional || {};
@@ -257,8 +358,8 @@ function pintarNacional() {
   ctrl.textContent = datos.estado_control || "–";
   ctrl.className = "pill" + ((datos.estado_control || "").includes("INCERTEZA") ? " warn" : "");
 
-  const nombres = { scht_ng: "Schteingart sin gate", schteingart: "Schteingart", v4: "v4 (swing por estado)", swing: "Quiroga", v1: "Etchenique" };
-  const etiq = { scht_ng: "Schteingart", schteingart: "Schteingart", v4: "v4", swing: "Quiroga", v1: "Etchenique" };
+  const nombres = { scht_ng: "Schteingart", swing: "Quiroga", v1: "Etchenique" };
+  const etiq = { scht_ng: "Schteingart", swing: "Quiroga", v1: "Etchenique" };
   $("metodo_nombre").textContent = "· método " + (nombres[metodo] || metodo);
   $("h_lula").textContent = "Proyectado · Lula (" + (etiq[metodo] || metodo) + ")";
   $("h_flavio").textContent = "Proyectado · Flavio (" + (etiq[metodo] || metodo) + ")";
@@ -270,6 +371,7 @@ function pintarNacional() {
   $("p_flavio_v").textContent = (b.flavio ? fmtNum(b.flavio.votos) + " votos" : "–") +
     (b.flavio && b.flavio.p5 != null ? "  [p5–p95: " + b.flavio.p5.toFixed(1) + "–" + b.flavio.p95.toFixed(1) + "%]" : "");
   $("p_otros_v").textContent = b.otros ? fmtNum(b.otros.votos) + " votos" : "–";
+  pintarGanador();
   barChart("chart_nacional", b);
 }
 
@@ -414,6 +516,7 @@ $("orden").addEventListener("change", (e) => { ordenActual = e.target.value; pin
 $("orden_c").addEventListener("change", (e) => { ordenCrudo = e.target.value; pintarTablaCrudo(); });
 $("buscar").addEventListener("input", pintarTabla);
 $("buscar_c").addEventListener("input", pintarTablaCrudo);
+$("btn_export").addEventListener("click", exportarTarjeta);
 
 refrescar();
 setInterval(refrescar, 60000);

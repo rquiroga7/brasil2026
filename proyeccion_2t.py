@@ -189,12 +189,22 @@ def payload_ambito(base, live, nombre="BR"):
     ql, qf = quiroga(m)
     scht = schteingart(base, live) if (live is not None and not live.empty) else None
     esc = 100 * m["sec_cnt"].sum() / max(m["sec_tot"].sum(), 1)
+    b_swing = bloque(ql, qf, ql + qf)
+    b_scht = bloque(scht[0], scht[1], scht[0] + scht[1]) if scht else dict(b_swing)
     out = {
         "escrutado": round(esc, 2),
         "crudo": crudo_bloque(l_cnt, f_cnt, val_cnt, total_cnt, br, nu),
-        "swing": bloque(ql, qf, ql + qf),
-        "schteingart": bloque(scht[0], scht[1], scht[0] + scht[1]) if scht else bloque(l_cnt, f_cnt, val_cnt),
+        "swing": b_swing,
+        "schteingart": b_scht,
     }
+    out["scht_ng"] = b_scht
+    # banda aproximada (se angosta con el escrutado) para el gráfico de ganador
+    hw = 0.5 + 4.0 * (1 - min(esc, 100) / 100)
+    for blk in (out["crudo"], out["swing"], out["schteingart"]):
+        for c in ("lula", "flavio"):
+            p = blk[c]["pct"]
+            blk[c]["p5"] = round(max(0.0, p - hw), 2)
+            blk[c]["p95"] = round(min(100.0, p + hw), 2)
     return out, m
 
 
@@ -220,6 +230,7 @@ def main():
             "electores_habilitados": int(bu["electores"].sum()),
             "validos_proyectados": int(eu["swing"]["lula"]["votos"] + eu["swing"]["flavio"]["votos"]),
             "crudo": eu["crudo"], "swing": eu["swing"], "schteingart": eu["schteingart"],
+            "scht_ng": eu["scht_ng"],
         })
 
     serie = []
