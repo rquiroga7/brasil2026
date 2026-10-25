@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Monitor 2T 2026 — zona</title>
+<style>
+:root{
+  --bg:#0e1116; --card:#161b22; --card2:#1b2230; --line:#2a3342;
+  --txt:#e6edf3; --dim:#8b98a9; --green:#3fb950; --amber:#d29922;
+  --red:#f85149; --blue:#58a6ff; --lula:#e23b3b; --flavio:#3b6fe2;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(14,17,22,.96);backdrop-filter:blur(6px);z-index:9}
+h1{font-size:18px;margin:0;font-weight:650;letter-spacing:.2px}
+.clock{color:var(--dim);font-variant-numeric:tabular-nums}
+.spacer{flex:1}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:650;border:1px solid transparent}
+.pill.ok{background:rgba(63,185,80,.14);color:var(--green);border-color:rgba(63,185,80,.35)}
+.pill.warn{background:rgba(210,153,34,.14);color:var(--amber);border-color:rgba(210,153,34,.4)}
+.pill.bad{background:rgba(248,81,73,.14);color:var(--red);border-color:rgba(248,81,73,.4)}
+.pill.gray{background:#222a36;color:var(--dim);border-color:#333d4d}
+button{background:#212a37;color:var(--txt);border:1px solid #344052;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer}
+button:hover{background:#2a3546}
+main{padding:16px 18px 40px;max-width:1400px;margin:0 auto}
+.banner{border-radius:10px;padding:12px 14px;margin-bottom:14px;border:1px solid var(--line);background:var(--card);font-size:13.5px}
+.banner.warn{border-color:rgba(210,153,34,.45);background:rgba(210,153,34,.08)}
+.banner.ok{border-color:rgba(63,185,80,.45);background:rgba(63,185,80,.08)}
+.banner.bad{border-color:rgba(248,81,73,.45);background:rgba(248,81,73,.08)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 15px}
+.card h2{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--dim);margin:0 0 10px;font-weight:700}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-bottom:1px dashed #232c39}
+.kv:last-child{border-bottom:0}
+.kv b{font-variant-numeric:tabular-nums}
+.kv span{color:var(--dim)}
+.big{font-size:30px;font-weight:750;font-variant-numeric:tabular-nums}
+.sub{color:var(--dim);font-size:12px}
+.lula{color:var(--lula)} .flavio{color:var(--flavio)}
+.note{font-size:12px;color:var(--dim);margin-top:8px}
+canvas{width:100%;height:180px;display:block}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{text-align:left;padding:5px 6px;border-bottom:1px solid #232c39;white-space:nowrap}
+th{color:var(--dim);font-weight:600}
+tr.stale td{color:#aeb7c4}
+tr.live td{color:var(--txt)}
+.pre{background:#0b0f14;border:1px solid #232c39;border-radius:8px;padding:10px;height:190px;overflow:auto;font:11.5px/1.4 ui-monospace,Consolas,monospace;color:#b6c2d1;white-space:pre-wrap}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:760px){.two{grid-template-columns:1fr}}
+.tag{font-size:11px;padding:2px 7px;border-radius:999px;background:#222a36;color:var(--dim)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;background:currentColor}
+</style>
+</head>
+<body>
+<header>
+  <h1>Monitor 2T 2026 — nivel zona</h1>
+  <span class="clock" id="reloj">—</span>
+  <span class="spacer"></span>
+  <span class="pill gray" id="st_down"><span class="dot"></span><span>descarga</span></span>
+  <span class="pill gray" id="st_up"><span class="dot"></span><span>upload</span></span>
+  <button id="btn_pausa">Pausar</button>
+  <button onclick="location.reload()">Refrescar</button>
+  <button onclick="window.open('https://rquiroga7.github.io/brasil2026/','_blank')">Dashboard</button>
+  <button onclick="window.open('https://github.com/rquiroga7/brasil2026/tree/data2t','_blank')">data2t</button>
+</header>
+
+<main>
+  <div class="banner" id="banner">Conectando…</div>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Zonas descargadas (CSV)</h2>
+      <div class="big" id="csv_votes">—</div>
+      <div class="sub">votos Lula+Flávio (última lectura por zona)</div>
+      <div style="margin-top:10px">
+        <div class="kv"><span>filas / zonas únicas</span><b><span id="csv_rows">—</span> / <span id="csv_zones">—</span></b></div>
+        <div class="kv"><span>secciones totalizadas</span><b id="csv_sec">—</b></div>
+        <div class="kv"><span>última fila</span><b id="csv_lasttime">—</b></div>
+        <div class="kv"><span>edad del CSV</span><b id="csv_age">—</b></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Raspador</h2>
+      <div class="kv"><span>PID / vivo</span><b><span id="scr_pid">—</span> <span id="scr_alive" class="tag">—</span></b></div>
+      <div class="kv"><span>último latido</span><b id="scr_heart">—</b></div>
+      <div class="kv"><span>pasada / tareas</span><b><span id="scr_pass">—</span> / <span id="scr_tasks">—</span></b></div>
+      <div class="kv"><span>nota</span><b id="scr_note">—</b></div>
+      <div class="note">Consulta cada ~20 s; si no hay novedades, igual escribe latido.</div>
+    </section>
+
+    <section class="card">
+      <h2>TSE agregado BR — solo referencia</h2>
+      <div class="big" id="agg_pct">—</div>
+      <div class="sub" id="agg_votes">—</div>
+      <div class="kv"><span>Lula</span><b class="lula" id="agg_lula">—</b></div>
+      <div class="kv"><span>Flávio</span><b class="flavio" id="agg_flavio">—</b></div>
+      <div class="kv"><span>secciones</span><b id="agg_sec">—</b></div>
+      <div class="kv"><span>actualizado TSE</span><b id="agg_dg">—</b></div>
+      <div class="note">No se usa para la proyección (necesitamos zona). Sirve para saber si TSE ya avanzó.</div>
+    </section>
+
+    <section class="card">
+      <h2>Proyección publicada</h2>
+      <div class="kv"><span>escrutado</span><b id="proj_esc">—</b></div>
+      <div class="kv"><span>crudo</span><b><span class="lula" id="proj_lula">—</span> / <span class="flavio" id="proj_flavio">—</span></b></div>
+      <div class="kv"><span>swing (Lula)</span><b id="proj_swing">—</b></div>
+      <div class="kv"><span>híbrido (Lula)</span><b id="proj_hyb">—</b></div>
+      <div class="kv"><span>puntos serie</span><b id="proj_serie">—</b></div>
+      <div class="kv"><span>edad del JSON</span><b id="proj_age">—</b></div>
+    </section>
+
+    <section class="card">
+      <h2>Upload (data2t)</h2>
+      <div class="kv"><span>commit</span><b id="up_commit">—</b></div>
+      <div class="kv"><span>hace</span><b id="up_age">—</b></div>
+      <div class="kv"><span>runner PID</span><b><span id="up_pid">—</span> <span id="up_alive" class="tag">—</span></b></div>
+      <div class="note" id="up_note">—</div>
+    </section>
+  </div>
+
+  <div class="two" style="margin-top:12px">
+    <section class="card">
+      <h2>Muestra de archivos TSE por zona (-u.json)</h2>
+      <table>
+        <thead><tr><th>UF</th><th>Mun</th><th>Zona</th><th>dg</th><th>sec</th><th>votos</th><th>edad</th></tr></thead>
+        <tbody id="zonas_tbody"></tbody>
+      </table>
+      <div class="note">Si <b>dg</b> es 13/10/2026, el archivo por zona aún es plantilla (TSE no publicó).</div>
+    </section>
+    <section class="card">
+      <h2>Evolución</h2>
+      <canvas id="chart"></canvas>
+      <div class="note"><span style="color:var(--green)">■</span> votos por zona (CSV)　<span style="color:#8b98a9">■</span> agregado BR (referencia)</div>
+    </section>
+  </div>
+
+  <div class="two" style="margin-top:12px">
+    <section class="card">
+      <h2>Log runner</h2>
+      <div class="pre" id="log_run"></div>
+    </section>
+    <section class="card">
+      <h2>Log raspador</h2>
+      <div class="pre" id="log_scr"></div>
+    </section>
+  </div>
+</main>
+
+<script>
+let datos = null, pausa = false, t = null;
+const $ = (id) => document.getElementById(id);
+const fmt = (n) => (n == null ? "—" : Number(n).toLocaleString("es"));
+const fmtPct = (n) => (n == null ? "—" : Number(n).toFixed(2) + "%");
+const fmtAge = (s) => (s == null ? "—" : s < 90 ? Math.round(s) + " s" : s < 3600 ? Math.round(s / 60) + " min" : (s / 3600).toFixed(1) + " h");
+const fmtTime = (iso) => { try { return new Date(iso).toLocaleTimeString([], { hour12: false, hour: "2-digit", minute: "2-digit", second: "2-digit" }); } catch (e) { return "—"; } };
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+function setPill(el, st) {
+  el.className = "pill " + (st === "ok" ? "ok" : st === "waiting_tse" ? "warn" : st === "unknown" ? "gray" : "bad");
+  el.querySelector("span:last-child").textContent =
+    st === "ok" ? "ok" : st === "waiting_tse" ? "esperando TSE" :
+    st === "stalled" ? "stalled" : st === "dead" ? "detenido" : "sin datos";
+}
+
+function render() {
+  const d = datos;
+  $("reloj").textContent = fmtTime(d.now);
+  setPill($("st_down"), d.status.download);
+  setPill($("st_up"), d.status.upload);
+
+  const c = d.csv || {}, ag = d.aggregate || {}, p = d.payload || {}, h = d.heart || {}, br = d.branch || {};
+  $("csv_votes").textContent = fmt(c.votes);
+  $("csv_rows").textContent = fmt(c.rows);
+  $("csv_zones").textContent = fmt(c.zones);
+  $("csv_sec").textContent = fmt(c.sec);
+  $("csv_lasttime").textContent = (c.last && c.last.hora_tse) || "—";
+  $("csv_age").textContent = fmtAge(c.age_s);
+
+  $("scr_pid").textContent = h.pid || "—";
+  $("scr_alive").textContent = d.scraper.alive ? "vivo" : "—";
+  $("scr_heart").textContent = fmtAge(h.age_s);
+  $("scr_pass").textContent = h.pasada == null ? "—" : h.pasada;
+  $("scr_tasks").textContent = h.tareas == null ? "—" : h.tareas;
+  $("scr_note").textContent = h.nota || "—";
+
+  $("agg_pct").textContent = fmtPct(ag.pct);
+  $("agg_votes").textContent = fmt(ag.tv) + " votos · " + fmt(ag.st) + "/" + fmt(ag.ts) + " secciones";
+  $("agg_lula").textContent = fmt(ag.lula) + "  (" + (ag.tv ? (100 * ag.lula / (ag.lula + ag.flavio)).toFixed(2) : "—") + "%)";
+  $("agg_flavio").textContent = fmt(ag.flavio) + "  (" + (ag.tv ? (100 * ag.flavio / (ag.lula + ag.flavio)).toFixed(2) : "—") + "%)";
+  $("agg_sec").textContent = fmt(ag.st) + " / " + fmt(ag.ts);
+  $("agg_dg").textContent = (ag.dg ? ag.dg + " " + (ag.hg || "") : "—") +
+    (ag.stamp_age_s != null ? "  (" + fmtAge(ag.stamp_age_s) + ")" : "");
+
+  $("proj_esc").textContent = fmtPct(p.escrutado);
+  $("proj_lula").textContent = fmtPct(p.crudo_lula);
+  $("proj_flavio").textContent = fmtPct(p.crudo_flavio);
+  $("proj_swing").textContent = fmtPct(p.swing);
+  $("proj_hyb").textContent = fmtPct(p.hybrid);
+  $("proj_serie").textContent = fmt(p.serie_n);
+  $("proj_age").textContent = fmtAge(p.age_s);
+
+  $("up_commit").textContent = br.commit || "—";
+  $("up_age").textContent = fmtAge(br.age_s);
+  $("up_pid").textContent = d.runner.pid || "—";
+  $("up_alive").textContent = d.runner.alive ? "vivo" : "—";
+  $("up_note").textContent = br.when ? "commit " + br.when : (br.error || "—");
+
+  const banner = $("banner");
+  const st = d.status.download;
+  if (st === "waiting_tse") {
+    banner.className = "banner warn";
+    banner.innerHTML = "TSE todavía <b>no publica los archivos por zona</b> (-u.json siguen en plantilla). " +
+      "La votación fue extendida; el raspador sigue consultando cada ~20 s. " +
+      "El agregado BR (solo referencia) ya marca <b>" + fmtPct(ag.pct) + "</b> · <b>" + fmt(ag.tv) + "</b> votos. " +
+      "El feed estático está congelado en <b>" + esc((ag.dg || "") + " " + (ag.hg || "")) + "</b> (" + fmtAge(ag.stamp_age_s) + "); la UI del TSE puede ir por delante.";
+  } else if (st === "ok") {
+    banner.className = "banner ok";
+    banner.innerHTML = "Datos <b>por zona</b> en vivo: " + fmt(c.votes) + " votos en " + fmt(c.zones) + " zonas.";
+  } else if (st === "stalled") {
+    banner.className = "banner bad";
+    banner.innerHTML = "El raspador está vivo pero el latido/CSV no avanza. Revisar log.";
+  } else if (st === "dead") {
+    banner.className = "banner bad";
+    banner.innerHTML = "El raspador no está corriendo.";
+  } else {
+    banner.className = "banner";
+    banner.textContent = "Esperando datos del raspador…";
+  }
+
+  const tb = $("zonas_tbody");
+  tb.innerHTML = (d.zones || []).map(z => {
+    const stale = !String(z.dg || "").startsWith(new Date().toLocaleDateString("es", { day: "2-digit", month: "2-digit", year: "numeric" }));
+    return `<tr class="${stale ? "stale" : "live"}">
+      <td>${esc(z.uf)}</td><td>${esc(z.mun)}</td><td>${esc(z.zona)}</td>
+      <td>${esc(z.dg || (z.http === 404 ? "404" : "—"))}</td>
+      <td>${fmt(z.st)}</td><td>${fmt(z.tv)}</td><td>${fmtAge(z.age_s)}</td></tr>`;
+  }).join("") || `<tr><td colspan="7" class="sub">sin muestra todavía</td></tr>`;
+
+  drawChart(d.history || []);
+}
+
+function drawChart(hist) {
+  const cv = $("chart");
+  const dpr = window.devicePixelRatio || 1;
+  const W = cv.clientWidth || 500, Hh = 180;
+  cv.width = W * dpr; cv.height = Hh * dpr;
+  const ctx = cv.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, Hh);
+  if (!hist.length) return;
+  const data = hist.slice(-180);
+  const P = { l: 46, r: 8, t: 10, b: 20 };
+  const w = W - P.l - P.r, hh = Hh - P.t - P.b;
+  const vmax = Math.max(1, ...data.map(x => Math.max(x.votes || 0, x.agg_votes || 0)));
+  const X = (i) => P.l + (data.length === 1 ? w / 2 : (i / (data.length - 1)) * w);
+  const Y = (v) => P.t + hh - (v / vmax) * hh;
+  ctx.strokeStyle = "#232c39"; ctx.lineWidth = 1;
+  for (let k = 0; k <= 4; k++) {
+    const y = P.t + (k / 4) * hh;
+    ctx.beginPath(); ctx.moveTo(P.l, y); ctx.lineTo(W - P.r, y); ctx.stroke();
+  }
+  ctx.fillStyle = "#8b98a9"; ctx.font = "10px system-ui";
+  for (let k = 0; k <= 4; k++) {
+    const val = vmax * (1 - k / 4);
+    ctx.fillText(val >= 1e6 ? (val / 1e6).toFixed(1) + "M" : val >= 1e3 ? (val / 1e3).toFixed(0) + "k" : Math.round(val), 4, P.t + (k / 4) * hh + 3);
+  }
+  const line = (key, color, dash) => {
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.setLineDash(dash || []);
+    ctx.beginPath();
+    data.forEach((x, i) => { const y = Y(x[key] || 0); i ? ctx.lineTo(X(i), y) : ctx.moveTo(X(i), y); });
+    ctx.stroke(); ctx.setLineDash([]);
+  };
+  line("agg_votes", "#8b98a9", [4, 3]);
+  line("votes", "#3fb950");
+  const last = data[data.length - 1];
+  ctx.fillStyle = "#8b98a9"; ctx.font = "10px system-ui";
+  ctx.fillText(fmtTime(new Date(last.t * 1000).toISOString()), W - 60, Hh - 4);
+}
+
+async function cargar() {
+  if (pausa) return;
+  try {
+    const r = await fetch("/api/status?t=" + Date.now(), { cache: "no-store" });
+    datos = await r.json();
+    render();
+  } catch (e) {
+    $("banner").className = "banner bad";
+    $("banner").textContent = "Sin conexión con el monitor (¿servidor detenido?)";
+  }
+}
+
+async function cargarLogs() {
+  try {
+    const r = await fetch("/api/log?t=" + Date.now(), { cache: "no-store" });
+    const j = await r.json();
+    const a = $("log_run"), b = $("log_scr");
+    a.textContent = (j.runner || []).slice(-45).join("\n");
+    b.textContent = (j.scraper || []).slice(-45).join("\n");
+    a.scrollTop = a.scrollHeight; b.scrollTop = b.scrollHeight;
+  } catch (e) {}
+}
+
+$("btn_pausa").onclick = () => {
+  pausa = !pausa;
+  $("btn_pausa").textContent = pausa ? "Reanudar" : "Pausar";
+  if (!pausa) cargar();
+};
+
+cargar();
+setInterval(cargar, 3000);
+setInterval(cargarLogs, 5000);
+cargarLogs();
+</script>
+</body>
+</html>

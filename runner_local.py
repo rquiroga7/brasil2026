@@ -78,13 +78,18 @@ def main():
     print(f"[*] Runner local | turno {turno} | raspador cada {SCRAPER_INTERVAL}s | "
           f"publicación cada {PUBLISH_INTERVAL}s")
 
+    nombre_log = "scraper_2t.log" if turno == "2" else "scraper_1t.log"
+    log_scraper = open(rd.ruta(nombre_log), "a", buffering=1,
+                       encoding="utf-8", errors="replace")
     if turno == "2":
         raspador = subprocess.Popen(
             [PY, "scrapingbrasil2026zonpasG_rverboseRAP2_3X.py", "--turno", "2",
-             "--intervalo", str(SCRAPER_INTERVAL), "--silencioso"], cwd=REPO)
+             "--intervalo", str(SCRAPER_INTERVAL), "--silencioso"], cwd=REPO,
+            stdout=log_scraper, stderr=subprocess.STDOUT)
     else:
         raspador = subprocess.Popen(
-            [PY, "zonpasG_rodri.py", "--intervalo", str(SCRAPER_INTERVAL)], cwd=REPO)
+            [PY, "zonpasG_rodri.py", "--intervalo", str(SCRAPER_INTERVAL)], cwd=REPO,
+            stdout=log_scraper, stderr=subprocess.STDOUT)
     print(f"[*] Raspador lanzado (pid {raspador.pid}).")
 
     try:
@@ -111,6 +116,10 @@ def main():
             raspador.wait(timeout=10)
         except Exception:
             raspador.kill()
+        try:
+            log_scraper.close()
+        except Exception:
+            pass
         print("[i] Raspador detenido.")
 
 

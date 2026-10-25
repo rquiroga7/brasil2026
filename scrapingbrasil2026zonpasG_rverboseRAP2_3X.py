@@ -26,6 +26,7 @@ restante; se mantiene a propósito para resistencia en vivo.
 import os
 import csv
 import sys
+import json
 import time
 import argparse
 import threading
@@ -48,6 +49,7 @@ CODIGO_ELEICAO_6D = "006257"
 CARGO = "0001"
 
 ARCHIVO_CSV = rd.ruta("escrutinio_zonas_2026.csv")
+HEARTBEAT = rd.ruta("scraper_heartbeat.json")
 TURNO = "1"
 
 
@@ -228,6 +230,18 @@ def escribir_fila_csv(fila):
             csv.writer(f).writerow(fila)
 
 
+def latido(n_pasada, tareas=0, estados=0, nota=""):
+    """Escribe un latido por pasada (aunque no haya novedades) para el monitor."""
+    try:
+        with open(HEARTBEAT, "w", encoding="utf-8") as f:
+            json.dump({"ts": datetime.now().astimezone().isoformat(),
+                       "pasada": int(n_pasada), "tareas": int(tareas),
+                       "estados": int(estados), "nota": nota,
+                       "pid": os.getpid()}, f, ensure_ascii=False)
+    except OSError:
+        pass
+
+
 def asegurar_csv():
     if not os.path.exists(ARCHIVO_CSV):
         os.makedirs(os.path.dirname(ARCHIVO_CSV), exist_ok=True)
@@ -351,6 +365,7 @@ def realizar_barrido_inteligente(municipios, control_versiones, n_pasada, args):
 
     # 1) Abrangencia por UF EN PARALELO (antes: secuencial, 27 peticiones).
     ufs_con_muns = [uf for uf in estados if municipios.get(uf)]
+    latido(n_pasada, 0, len(ufs_con_muns), "inicio")
     with ThreadPoolExecutor(max_workers=min(len(ufs_con_muns) or 1, args.workers)) as ex:
         versiones_por_uf = dict(zip(ufs_con_muns, ex.map(versiones_estado, ufs_con_muns)))
 
@@ -378,6 +393,7 @@ def realizar_barrido_inteligente(municipios, control_versiones, n_pasada, args):
     print(f"[i] Tareas pendientes: {muns_pend} municipios / {len(tareas)} zonas.")
     if not tareas:
         print("[✓] Sin novedades o cambios en las zonas.")
+        latido(n_pasada, 0, len(ufs_con_muns), "sin_novedades")
         return 0
 
     # 3) Intercalar por estado (round-robin) para quitar el sesgo alfabético.
@@ -417,6 +433,7 @@ def realizar_barrido_inteligente(municipios, control_versiones, n_pasada, args):
         print(f"[i] Respuestas HTTP: {dict(sorted(_contadores.items()))}")
     print(f"\n[✓] Pasada N° {n_pasada} terminada. Municipios actualizados: "
           f"{len(municipios_actualizados)}")
+    latido(n_pasada, len(tareas), len(ufs_con_muns), "fin")
     return len(municipios_actualizados)
 
 
