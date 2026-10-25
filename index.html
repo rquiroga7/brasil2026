@@ -67,9 +67,13 @@
     <span class="pill" id="control">–</span>
   </div>
 
-  <div class="tabs">
-    <button data-tab="proj" class="active">Proyección</button>
-    <button data-tab="crudo">Crudo (en vivo)</button>
+    <div class="seg" id="seg_ronda" style="margin:6px 0">
+      <button data-ronda="2t" class="active">2ª vuelta</button>
+      <button data-ronda="1t">1ª vuelta</button>
+    </div>
+    <div class="tabs">
+      <button data-tab="proj" class="active">Proyecci</button>
+      <button data-tab="crudo">Crudo (en vivo)</button>
   </div>
 
   <!-- ================= TAB: PROYECCIÓN ================= -->
@@ -131,7 +135,7 @@
       <h2>Evolución temporal</h2>
       <h3 style="font-size:.85rem;color:var(--muted);margin:.2rem 0 .3rem">Datos Crudos</h3>
       <canvas id="chart_raw"></canvas>
-      <h3 style="font-size:.85rem;color:var(--muted);margin:.8rem 0 .3rem">Método Etchenique</h3>
+      <h3 id="h_metodo_ext" style="font-size:.85rem;color:var(--muted);margin:.8rem 0 .3rem">Método Etchenique</h3>
       <canvas id="chart_ext"></canvas>
       <h3 style="font-size:.85rem;color:var(--muted);margin:.8rem 0 .3rem">Método Quiroga</h3>
       <canvas id="chart_swing"></canvas>
@@ -190,7 +194,10 @@
 <script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script>
-const DATOS_URL = (window.DATOS_URL && window.DATOS_URL.trim()) || "datos_web.json";
+const DATOS_URL_1T = (window.DATOS_URL && window.DATOS_URL.trim()) || "datos_web.json";
+const DATOS_URL_2T = (window.DATOS_URL_2T && window.DATOS_URL_2T.trim()) || "datos_web_2t.json";
+let ronda = "2t";
+const urlActual = () => (ronda === "2t" ? DATOS_URL_2T : DATOS_URL_1T);
 const COLORES = { lula: "#E11B22", flavio: "#4C8DFF", otros: "#8a8a8a" };
 let datos = null, metodo = "swing", ordenActual = "electores", ordenCrudo = "escrutado";
 let chartRaw = null, chartExt = null, chartSwing = null;
@@ -368,15 +375,17 @@ function pintarSeries() {
 // ---------- Orquestación ----------
 async function refrescar() {
   try {
-    const sep = DATOS_URL.includes("?") ? "&" : "?";
-    const r = await fetch(DATOS_URL + sep + "t=" + Date.now(), { cache: "no-store" });
+    const URL = urlActual();
+    const sep = URL.includes("?") ? "&" : "?";
+    const r = await fetch(URL + sep + "t=" + Date.now(), { cache: "no-store" });
     if (!r.ok) throw new Error("HTTP " + r.status);
     datos = await r.json();
     $("actualizado").textContent = "actualizado " + (datos.actualizado || "–");
-    $("nota_metodo").textContent = datos.swing_disponible
-      ? "swing activo (2022 disponible)"
-      : "swing no disponible: falta escrutinio_zonas_2022.csv (se muestra v1)";
+    $("nota_metodo").textContent = (ronda === "2t" ? "2ª vuelta · base 1ª vuelta 2026"
+                                                   : "1ª vuelta · base 2022")
+      + (datos.swing_disponible ? "" : " · swing no disponible");
     if (!datos.swing_disponible) { metodo = "v1"; marcarSegmento(); }
+    $("h_metodo_ext").textContent = ronda === "2t" ? "Método Schteingart" : "Método Etchenique";
     pintarNacional(); pintarTabla(); pintarCrudo(); pintarTablaCrudo(); pintarSeries();
   } catch (e) {
     $("actualizado").textContent = "sin datos todavía (" + e.message + ")";
@@ -393,6 +402,13 @@ document.querySelectorAll(".tabs button").forEach((b) =>
     document.querySelectorAll(".tabs button").forEach((x) => x.classList.toggle("active", x === b));
     $("tab-proj").classList.toggle("hidden", b.dataset.tab !== "proj");
     $("tab-crudo").classList.toggle("hidden", b.dataset.tab !== "crudo");
+  }));
+document.querySelectorAll("#seg_ronda button").forEach((b) =>
+  b.addEventListener("click", () => {
+    ronda = b.dataset.ronda;
+    document.querySelectorAll("#seg_ronda button").forEach((x) => x.classList.toggle("active", x === b));
+    datos = null;
+    refrescar();
   }));
 $("orden").addEventListener("change", (e) => { ordenActual = e.target.value; pintarTabla(); });
 $("orden_c").addEventListener("change", (e) => { ordenCrudo = e.target.value; pintarTablaCrudo(); });

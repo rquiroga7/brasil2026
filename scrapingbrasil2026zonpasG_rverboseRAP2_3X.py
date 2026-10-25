@@ -48,6 +48,19 @@ CODIGO_ELEICAO_6D = "006257"
 CARGO = "0001"
 
 ARCHIVO_CSV = rd.ruta("escrutinio_zonas_2026.csv")
+TURNO = "1"
+
+
+def configurar_turno(turno):
+    """1ª vuelta = 6257 / 006257; 2ª vuelta = 6258 / 006258 (archivos _2t)."""
+    global CODIGO_ELEICAO, CODIGO_ELEICAO_6D, ARCHIVO_CSV, TURNO
+    TURNO = str(turno)
+    if TURNO == "2":
+        CODIGO_ELEICAO, CODIGO_ELEICAO_6D = "6258", "006258"
+        ARCHIVO_CSV = rd.ruta("escrutinio_zonas_2026_2t.csv")
+    else:
+        CODIGO_ELEICAO, CODIGO_ELEICAO_6D = "6257", "006257"
+        ARCHIVO_CSV = rd.ruta("escrutinio_zonas_2026.csv")
 
 MAX_WORKERS = 128
 
@@ -59,16 +72,16 @@ CANDIDATOS = {
     "lula": "Lula", "flavio bolsonaro": "Flavio_Bolsonaro", "augusto cury": "Augusto_Cury",
     "caiado": "Ronaldo_Caiado", "zema": "Romeu_Zema", "renan santos": "Renan_Santos",
     "hertz dias": "Hertz_Dias", "edmilson costa": "Edmilson_Costa", "clariana": "Clariana_Barao",
-    "avalanche": "Avalanche_Marçal", "marçal": "Avalanche_Marçal",
     "pimenta": "Rui_Costa_Pimenta", "grassi": "Wilson_Grassi", "samara": "Samara_Martins"
 }
 
 CABECERA = [
-    "hora_local", "hora_tse", "codigo_municipio", "zona_electoral", "electores_totales",
-    "votos_totales", "Lula", "Flavio_Bolsonaro", "Augusto_Cury", "Ronaldo_Caiado",
-    "Romeu_Zema", "Renan_Santos", "Hertz_Dias", "Edmilson_Costa", "Clariana_Barao",
-    "Avalanche_Marçal", "Rui_Costa_Pimenta", "Wilson_Grassi", "Samara_Martins",
-    "votos_blancos", "votos_nulos", "estado_uf", "numero_pasada",
+    "hora_local", "hora_tse", "estado_uf", "codigo_municipio", "municipio",
+    "zona_electoral", "secoes_totalizadas", "electores", "votos_totales",
+    "Lula", "Flavio_Bolsonaro", "Augusto_Cury", "Ronaldo_Caiado", "Romeu_Zema",
+    "Renan_Santos", "Hertz_Dias", "Edmilson_Costa", "Clariana_Barao",
+    "Rui_Costa_Pimenta", "Wilson_Grassi", "Samara_Martins",
+    "votos_blancos", "votos_nulos", "numero_pasada",
 ]
 
 HEADERS = {
@@ -284,6 +297,7 @@ def descargar_zona_individual(uf, cod_mun, nombre, zona, hora_tse, n_pasada):
     hora_local = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     e = data.get("e", {})
     v = data.get("v", {})
+    s = data.get("s", {})
 
     num_zona = str(zona).lstrip("0") or "0"
 
@@ -299,13 +313,13 @@ def descargar_zona_individual(uf, cod_mun, nombre, zona, hora_tse, n_pasada):
                             conteo[col] = votos
 
     fila = [
-        hora_local, hora_tse, cod_mun, num_zona, e.get("te", "0"), v.get("tv", "0"),
+        hora_local, hora_tse, uf.upper(), cod_mun, nombre, num_zona,
+        s.get("st", "0"), e.get("te", "0"), v.get("tv", "0"),
         conteo["Lula"], conteo["Flavio_Bolsonaro"], conteo["Augusto_Cury"],
         conteo["Ronaldo_Caiado"], conteo["Romeu_Zema"], conteo["Renan_Santos"],
         conteo["Hertz_Dias"], conteo["Edmilson_Costa"], conteo["Clariana_Barao"],
-        conteo["Avalanche_Marçal"], conteo["Rui_Costa_Pimenta"],
-        conteo["Wilson_Grassi"], conteo["Samara_Martins"],
-        v.get("vb", "0"), v.get("vn", "0"), uf.upper(), n_pasada,
+        conteo["Rui_Costa_Pimenta"], conteo["Wilson_Grassi"], conteo["Samara_Martins"],
+        v.get("vb", "0"), v.get("vn", "0"), n_pasada,
     ]
     escribir_fila_csv(fila)
     return f"{uf}/{cod_mun}", hora_tse
@@ -409,6 +423,8 @@ def realizar_barrido_inteligente(municipios, control_versiones, n_pasada, args):
 def main():
     global VERBOSE, ARCHIVO_CSV
     parser = argparse.ArgumentParser(description="Raspador TSE 2026 RAP2 (rápido).")
+    parser.add_argument("--turno", default="1", choices=["1", "2"],
+                        help="1 = 1ª vuelta (6257); 2 = 2ª vuelta (6258).")
     parser.add_argument("--uf", help="Procesar una sola UF (ej. sp, zz).")
     parser.add_argument("--una-pasada", action="store_true", help="Un ciclo y salir.")
     parser.add_argument("--workers", type=int, default=MAX_WORKERS, help="Hilos concurrentes.")
@@ -422,11 +438,13 @@ def main():
     args = parser.parse_args()
 
     VERBOSE = not args.silencioso
+    configurar_turno(args.turno)
     if args.salida:
         ARCHIVO_CSV = args.salida
     configurar_limite(args.limite)
 
     print("[*] Iniciando raspador RAP2 (multithread + escritura inmediata).")
+    print(f"[*] Turno {TURNO} | elección {CODIGO_ELEICAO} ({CODIGO_ELEICAO_6D})")
     print(f"[*] Hilos: {args.workers} | límite: {args.limite} req/s | salida: {ARCHIVO_CSV}")
 
     asegurar_csv()

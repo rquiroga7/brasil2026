@@ -189,6 +189,11 @@ def construir_detalle(y, turno="1"):
 
 def main():
     anios = (2018, 2022, 2026)
+    if "--anio" in sys.argv:
+        anios = (int(sys.argv[sys.argv.index("--anio") + 1]),)
+    for a in sys.argv:
+        if a.startswith("--anio="):
+            anios = (int(a.split("=", 1)[1]),)
     solo_det = "--solo-detalle" in sys.argv
     resumen = []
     if solo_det:
@@ -199,10 +204,12 @@ def main():
     else:
         for y in anios:
             resumen.append(construir(y, "1"))
-        resumen.append(construir(2022, "2"))
+        if 2022 in anios:
+            resumen.append(construir(2022, "2"))
     for y in anios:
         construir_detalle(y, "1")
-    construir_detalle(2022, "2")
+    if 2022 in anios:
+        construir_detalle(2022, "2")
     with open(os.path.join(SEC_DIR, "resumen_secciones.json"), "w", encoding="utf-8") as f:
         json.dump(resumen, f, ensure_ascii=False, indent=2)
     print("[OK] resumen_secciones.json")
