@@ -43,22 +43,34 @@ escrutinio oficial del TSE (`resultados.tse.jus.br`) y de los datos abiertos del
   (`data/socio.js`).
 - **Referencia 2022 / jerarquía IBGE**: `data/elecciones-2022.js`, `data/mun-jerarquia.json`.
 
-Los datos crudos y derivados se guardan en `D:\brasil2026_data` (ver `rutas_datos.py`),
-porque el disco C: está lleno. Los gráficos e informes se escriben en `plot/`.
+Los datos crudos y derivados se guardan en el disco de datos local
+(`/mnt/dae292c1-10dd-4169-83ec-c1360228407b/home/rquiroga/brasil2026_data`, ver
+`rutas_datos.py`; configurable con `BRASIL2026_DATA`). Los gráficos e informes
+se escriben en `plot/`.
+
+La **2ª vuelta 2026** no está publicada por sección en los datos abiertos del TSE:
+se descarga por zona desde `resultados.tse.jus.br` con
+`scrapingbrasil2026zonpasG_rverboseRAP2_3X.py --turno 2 --una-pasada`. Por eso las
+inferencias `2026 1T → 2T` y `2022 2T → 2026 2T` se estiman a nivel de zona.
 
 ## Informes
 
 - `plot/informe_migracion_2022_2026_es.md` y `plot/relatorio_migracao_2022_2026_pt.md`
   (migración de votos, español y portugués).
 - `plot/informe_socio_es.md` y `plot/relatorio_socio_pt.md` (factores socioeconómicos).
+- `plot/informe_socio_2026_1t_2t_es.md` y `plot/informe_socio_2022_2t_2026_2t_es.md`
+  (cruce socioeconómico de las inferencias con 2ª vuelta 2026).
 - `COMO_PROYECTAMOS.md` (explicación metodológica de la proyección).
 
 ## Cómo correr (resumen)
 
 ```bash
-python descargar_secciones.py            # datos por sección (D:)
-python inferencia_ecologica.py           # migración de votos + gráficos
-python inferencia_ecologica_socio.py     # cruce socioeconómico
+python descargar_secciones.py            # datos por sección (2018/2022/2026 1T)
+python scrapingbrasil2026zonpasG_rverboseRAP2_3X.py --turno 2 --una-pasada
+python inferencia_ecologica.py --solo-2t # 2026 1T->2T y 2022 2T->2026 2T
+python inferencia_ecologica_socio.py --solo-2t
+python inferencia_ecologica.py           # todas las migraciones (más lento)
+python inferencia_ecologica_socio.py     # cruce socioeconómico base
 python backtest_timestamped.py           # backtest con la carga real
 ```
 

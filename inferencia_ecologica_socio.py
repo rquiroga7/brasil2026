@@ -66,8 +66,8 @@ def cargar_tse_ibge():
     return {int(k): str(v) for k, v in d.items()}
 
 
-def municipios(y, turno="1"):
-    d = ie.cargar_anio(y, turno)
+def municipios(y, turno="1", nivel="secao"):
+    d = ie.cargar_anio(y, turno, nivel=nivel)
     g = d.groupby("mun", as_index=False).agg(
         uf=("uf", "first"), lula=("blk_lula", "sum"), bolso=("blk_bolso", "sum"),
         otros=("blk_otros", "sum"), bn=("blk_bn", "sum"), aptos=("aptos", "sum"))
@@ -79,19 +79,19 @@ def municipios(y, turno="1"):
     return g
 
 
-def dataset_municipal():
-    m22, m26 = municipios(2022), municipios(2026)
-    m = m22[["mun", "uf", "lula_pct", "bolso_pct", "turnout", "validos", "aptos"]].merge(
-        m26[["mun", "lula_pct", "bolso_pct", "turnout", "validos"]],
-        on="mun", suffixes=("_22", "_26"))
+def dataset_municipal(y0=2022, t0="1", y1=2026, t1="1", nivel="secao"):
+    m0 = municipios(y0, t0, nivel)
+    m1 = municipios(y1, t1, nivel)
+    m = m0[["mun", "uf", "lula_pct", "bolso_pct", "turnout", "validos", "aptos"]].merge(
+        m1[["mun", "lula_pct", "bolso_pct", "turnout", "validos"]],
+        on="mun", suffixes=("_o", "_d"))
     mapa = cargar_tse_ibge()
     m["ibge"] = m["mun"].map(lambda x: mapa.get(int(x)))
     socio, _ = cargar_socio()
     m = m.merge(socio, on="ibge", how="left")
-    m["swing_lula"] = m["lula_pct_26"] - m["lula_pct_22"]
-    m["swing_flavio"] = m["flavio_pct"] - m["bolso_pct_22"] if "flavio_pct" in m else \
-        m["bolso_pct_26"] - m["bolso_pct_22"]
-    m["log_votos"] = np.log10(m["validos_22"].clip(lower=1))
+    m["swing_lula"] = m["lula_pct_d"] - m["lula_pct_o"]
+    m["swing_flavio"] = m["bolso_pct_d"] - m["bolso_pct_o"]
+    m["log_votos"] = np.log10(m["validos_o"].clip(lower=1))
     m["ingreso_log"] = np.log10(m["ingreso"].clip(lower=1))
     return m
 
@@ -136,33 +136,47 @@ def correlaciones(df, ycol):
     return pd.DataFrame(filas)
 
 
-def ei_por_quintiles(m_sec, var, q=5):
-    """Matriz 4×4 (Lula, Bolsonaro/Flávio, Otros, No voto/Blanco-Nulo) por quintil."""
+def ei_por_quintiles(m_sec, var, lab_o_right="Bolsonaro", lab_d_right="Flavio", q=5):
+    """Matriz (Lula, derecha, Otros, No voto/Blanco-Nulo) por quintil.
+
+    Se descartan las filas/columnas sin masa (p. ej. "Otros" en un 2º turno),
+    de modo que el EM no reciba columnas de origen totalmente vacías.
+    """
     m = m_sec.dropna(subset=[var]).copy()
     m["q"] = pd.qcut(m[var], q, labels=False, duplicates="drop")
     m["b1_o"], m["b2_o"], m["b3_o"] = m["blk_lula_o"], m["blk_bolso_o"], m["blk_otros_o"]
     m["b4_o"] = m["blk_bn_o"] + m["blk_novoto_o"]
     m["b1_d"], m["b2_d"], m["b3_d"] = m["blk_lula_d"], m["blk_bolso_d"], m["blk_otros_d"]
     m["b4_d"] = m["blk_bn_d"] + m["blk_novoto_d"]
-    cols_o, cols_d = ["b1_o", "b2_o", "b3_o", "b4_o"], ["b1_d", "b2_d", "b3_d", "b4_d"]
-    lab_o = ["Lula", "Bolsonaro", "Otros", "No voto/Blanco-Nulo"]
-    lab_d = ["Lula", "Flavio", "Otros", "No voto/Blanco-Nulo"]
+    cols_o = ["b1_o", "b2_o", "b3_o", "b4_o"]
+    cols_d = ["b1_d", "b2_d", "b3_d", "b4_d"]
+    lab_o = ["Lula", lab_o_right, "Otros", "No voto/Blanco-Nulo"]
+    lab_d = ["Lula", lab_d_right, "Otros", "No voto/Blanco-Nulo"]
     filas = []
     for g, sub in m.groupby("q"):
         if len(sub) < 500:
             continue
         X = sub[cols_o].to_numpy(float)
-        th = ie.em_transicion(X, sub[cols_d].to_numpy(float))
-        N_o = X.sum(0)  # personas por bloque de origen en este quintil
-        for j, oj in enumerate(lab_o):
-            for kk, dk in enumerate(lab_d):
+        Y = sub[cols_d].to_numpy(float)
+        keep_o = X.sum(0) > 0
+        keep_d = Y.sum(0) > 0
+        if not keep_o.any() or not keep_d.any():
+            continue
+        Xk, Yk = X[:, keep_o], Y[:, keep_d]
+        th = ie.em_transicion(Xk, Yk)
+        N_o = Xk.sum(0)
+        labs_o = [lab for lab, k in zip(lab_o, keep_o) if k]
+        labs_d = [lab for lab, k in zip(lab_d, keep_d) if k]
+        for j, oj in enumerate(labs_o):
+            for kk, dk in enumerate(labs_d):
                 filas.append({"factor": var, "quintil": int(g), "origen": oj,
                               "destino": dk, "p": th[j, kk],
                               "votos": th[j, kk] * N_o[j], "n": len(sub)})
     return pd.DataFrame(filas)
 
 
-def graficar_panel(muni, corr, reg_sin, reg_con):
+def graficar_panel(muni, corr, reg_sin, reg_con, periodo="2022→2026",
+                   destino_right="Flavio", sufijo=""):
     fig, axes = plt.subplots(2, 2, figsize=(8 * 1.0, 6 * 1.0))  # placeholder, fixed below
     fig.set_size_inches(11, 8.25)  # 4:3
     ax = axes[0, 0]
@@ -174,8 +188,8 @@ def graficar_panel(muni, corr, reg_sin, reg_con):
                     fmt="o-", color=color, capsize=3, label=NOMBRES[v])
     ax.axhline(0, color="k", lw=0.6)
     ax.set_xlabel("Quintil (1=bajo, 5=alto)")
-    ax.set_ylabel("Cambio de Lula 2022→2026 (puntos)")
-    ax.set_title("A) Brasil: swing de Lula por quintil")
+    ax.set_ylabel(f"Cambio de Lula {periodo} (puntos)")
+    ax.set_title(f"A) Brasil: swing de Lula por quintil ({periodo})", fontsize=10)
     ax.grid(alpha=0.35, ls="--")
     ax.legend(fontsize=8)
 
@@ -188,8 +202,8 @@ def graficar_panel(muni, corr, reg_sin, reg_con):
                 fmt="none", ecolor="k", capsize=3)
     ax.axhline(0, color="k", lw=0.6)
     ax.set_xlabel("Quintil de % evangélicos")
-    ax.set_ylabel("Cambio de Lula (puntos)")
-    ax.set_title("B) Brasil: swing de Lula por % evangélicos")
+    ax.set_ylabel(f"Cambio de Lula (puntos)")
+    ax.set_title(f"B) Brasil: swing de Lula por % evangélicos ({periodo})", fontsize=10)
     ax.grid(alpha=0.35, axis="y", ls="--")
 
     ax = axes[1, 0]
@@ -201,7 +215,8 @@ def graficar_panel(muni, corr, reg_sin, reg_con):
     ax.set_yticklabels([NOMBRES.get(f, "log votos") for f in corr["factor"]], fontsize=8)
     ax.axvline(0, color="k", lw=0.6)
     ax.set_xlabel("Correlación con swing de Lula")
-    ax.set_title("C) Brasil: correlación de factores con el swing")
+    ax.set_title(f"C) Brasil: correlación de factores con el swing ({periodo})",
+                 fontsize=10)
     ax.grid(alpha=0.35, axis="x", ls="--")
     ax.legend(fontsize=8)
 
@@ -209,20 +224,23 @@ def graficar_panel(muni, corr, reg_sin, reg_con):
     if reg_con is not None:
         r = reg_con.sort_values("coef")
         ax.barh(r["factor"], r["coef"], xerr=1.96 * r["se"], color="#B8860B")
+        ax.set_yticks(np.arange(len(r)))
         ax.set_yticklabels([NOMBRES.get(f, "log votos") for f in r["factor"]], fontsize=8)
     ax.axvline(0, color="k", lw=0.6)
     ax.set_xlabel("Coef. (puntos por 1 SD), con efectos de estado")
-    ax.set_title("D) Brasil: regresión del swing de Lula")
+    ax.set_title(f"D) Brasil: regresión del swing de Lula ({periodo})", fontsize=10)
     ax.grid(alpha=0.35, axis="x", ls="--")
 
     fig.tight_layout()
     ep.mpl(fig, "Swing de Lula por quintiles de factores socioeconómicos (Censo 2022) y "
                 "regresión con efectos fijos de estado.")
-    fig.savefig(os.path.join(OUT, "socio_panel.png"), dpi=140, bbox_inches="tight")
+    fig.savefig(os.path.join(OUT, f"socio_panel{sufijo}.png"), dpi=140,
+                bbox_inches="tight")
     plt.close(fig)
 
 
-def graficar_grupo(quints, claves, archivo, titulo, meto, absoluto=False):
+def graficar_grupo(quints, claves, archivo, titulo, meto, absoluto=False,
+                   periodo="2022→2026"):
     q = quints
     fig, axes = plt.subplots(1, 3, figsize=(12, 9))
     ymin, ymax = np.inf, -np.inf
@@ -244,7 +262,7 @@ def graficar_grupo(quints, claves, archivo, titulo, meto, absoluto=False):
     for ax in axes:                       # mismo eje y en las tres facetas
         ax.set_ylim(max(0.0, ymin - margen), ymax + margen)
     suf = " — millones de votos/personas" if absoluto else ""
-    fig.suptitle(f"Brasil: {titulo} (2022→2026){suf}", fontsize=12)
+    fig.suptitle(f"Brasil: {titulo} ({periodo}){suf}", fontsize=12)
     axes[0].legend(fontsize=7)
     fig.tight_layout(rect=[0, 0.03, 1, 0.96])
     ep.mpl(fig, meto)
@@ -252,30 +270,36 @@ def graficar_grupo(quints, claves, archivo, titulo, meto, absoluto=False):
     plt.close(fig)
 
 
-# Transiciones hacia/desde Lula
-CLAVES_LULA = [("Lula", "Lula"), ("Lula", "Flavio"), ("Lula", "Otros"),
-               ("Lula", "No voto/Blanco-Nulo"),
-               ("Otros", "Lula"), ("No voto/Blanco-Nulo", "Lula")]
-# Transiciones desde Bolsonaro y hacia Flávio
-CLAVES_BOLSO = [("Bolsonaro", "Flavio"), ("Bolsonaro", "Otros"),
-                ("Bolsonaro", "No voto/Blanco-Nulo"),
-                ("Lula", "Flavio"), ("Otros", "Flavio"),
-                ("No voto/Blanco-Nulo", "Flavio")]
+def claves_para(origen_right="Bolsonaro", destino_right="Flavio"):
+    """Transiciones clave según cómo se llame la derecha en origen/destino."""
+    claves_lula = [("Lula", "Lula"), ("Lula", destino_right), ("Lula", "Otros"),
+                   ("Lula", "No voto/Blanco-Nulo"),
+                   ("Otros", "Lula"), ("No voto/Blanco-Nulo", "Lula")]
+    claves_bolso = [(origen_right, destino_right), (origen_right, "Otros"),
+                    (origen_right, "No voto/Blanco-Nulo"),
+                    ("Lula", destino_right), ("Otros", destino_right),
+                    ("No voto/Blanco-Nulo", destino_right)]
+    return claves_lula, claves_bolso
 
 
-def reporte(muni, corr, reg_con, r2_con, n_con, quints, idioma):
+# Compatibilidad con el par base 2022 1T → 2026 1T.
+CLAVES_LULA, CLAVES_BOLSO = claves_para()
+
+
+def reporte(muni, corr, reg_con, r2_con, n_con, quints, idioma,
+            periodo="2022→2026", origen_right="Bolsonaro", destino_right="Flavio"):
     es = idioma == "es"
     def num(x): return f"{x:+.1f}"
     lineas = []
     if es:
-        lineas.append("# ¿La economía y la sociedad cambian la migración de votos? (Brasil 2022→2026)\n")
+        lineas.append(f"# ¿La economía y la sociedad cambian la migración de votos? (Brasil {periodo})\n")
         lineas.append(f"Factores socioeconómicos municipales (Censo 2022) cruzados con "
-                      f"{n_con} municipios. Swing de Lula = % Lula 2026 − % Lula 2022 (1ª vuelta).\n")
+                      f"{n_con} municipios. Swing de Lula = % Lula destino − % Lula origen ({periodo}).\n")
         lineas.append("## Correlación con el swing de Lula\n")
     else:
-        lineas.append("# A economia e a sociedade mudam a migração de votos? (Brasil 2022→2026)\n")
+        lineas.append(f"# A economia e a sociedade mudam a migração de votos? (Brasil {periodo})\n")
         lineas.append(f"Fatores socioeconômicos municipais (Censo 2022) cruzados com "
-                      f"{n_con} municípios. Swing de Lula = % Lula 2026 − % Lula 2022 (1º turno).\n")
+                      f"{n_con} municípios. Swing de Lula = % Lula destino − % Lula origen ({periodo}).\n")
         lineas.append("## Correlação com o swing de Lula\n")
     lineas.append("| Factor | Correlación | Intra-estado |")
     lineas.append("|---|---|---|")
@@ -296,7 +320,7 @@ def reporte(muni, corr, reg_con, r2_con, n_con, quints, idioma):
         lineas.append("## ¿Modifica la inferencia ecológica? Transiciones clave por quintil\n")
     else:
         lineas.append("## A inferência ecológica muda? Transições-chave por quintil\n")
-    lineas.append("| Factor | Quintil | Bolsonaro→Lula | Bolsonaro→Flávio | Otros→Flávio |")
+    lineas.append(f"| Factor | Quintil | {origen_right}→Lula | {origen_right}→{destino_right} | Otros→{destino_right} |")
     lineas.append("|---|---|---|---|---|")
     for var in ["ingreso", "univ", "religion"]:
         sub = quints[quints["factor"] == var]
@@ -304,8 +328,8 @@ def reporte(muni, corr, reg_con, r2_con, n_con, quints, idioma):
             def g(oj, dk):
                 s = sub[(sub["quintil"] == q) & (sub["origen"] == oj) & (sub["destino"] == dk)]
                 return f"{s['p'].iloc[0]*100:.1f}%" if not s.empty else "—"
-            lineas.append(f"| {NOMBRES[var]} | {int(q)+1} | {g('Bolsonaro','Lula')} | "
-                          f"{g('Bolsonaro','Flavio')} | {g('Otros','Flavio')} |")
+            lineas.append(f"| {NOMBRES[var]} | {int(q)+1} | {g(origen_right,'Lula')} | "
+                          f"{g(origen_right,destino_right)} | {g('Otros',destino_right)} |")
     lineas.append("")
     if es:
         lineas.append("## Lectura\n"
@@ -326,25 +350,35 @@ def reporte(muni, corr, reg_con, r2_con, n_con, quints, idioma):
     return "\n".join(lineas) + f"\n\n---\n\n*{ep.CREDITO}*\n"
 
 
-def graficar_todo(muni, corr, reg_con, r2_con, n_con, quints):
+def graficar_todo(muni, corr, reg_con, r2_con, n_con, quints,
+                  periodo="2022→2026", sufijo="", origen_right="Bolsonaro",
+                  destino_right="Flavio"):
     """Genera todos los gráficos e informes a partir de los datos intermedios."""
-    graficar_panel(muni, corr, None, reg_con)
-    METO_LULA = ("Transiciones de voto hacia/desde Lula (2022→2026) por quintil de factores "
-                 "socioeconómicos; inferencia ecológica por secciones electorales (EM).")
-    METO_BOLSO = ("Transiciones de voto desde Bolsonaro 2022 y hacia Flávio 2026 por quintil de "
-                  "factores socioeconómicos; inferencia ecológica por secciones electorales (EM).")
-    graficar_grupo(quints, CLAVES_LULA, "socio_ei_lula.png",
-                   "transiciones hacia/desde Lula", METO_LULA)
-    graficar_grupo(quints, CLAVES_LULA, "socio_ei_abs_lula.png",
-                   "transiciones hacia/desde Lula", METO_LULA, absoluto=True)
-    graficar_grupo(quints, CLAVES_BOLSO, "socio_ei_bolso_flavio.png",
-                   "transiciones desde Bolsonaro y hacia Flávio", METO_BOLSO)
-    graficar_grupo(quints, CLAVES_BOLSO, "socio_ei_abs_bolso_flavio.png",
-                   "transiciones desde Bolsonaro y hacia Flávio", METO_BOLSO, absoluto=True)
-    open(os.path.join(OUT, "informe_socio_es.md"), "w", encoding="utf-8").write(
-        reporte(muni, corr, reg_con, r2_con, n_con, quints, "es"))
-    open(os.path.join(OUT, "relatorio_socio_pt.md"), "w", encoding="utf-8").write(
-        reporte(muni, corr, reg_con, r2_con, n_con, quints, "pt"))
+    claves_lula, claves_bolso = claves_para(origen_right, destino_right)
+    graficar_panel(muni, corr, None, reg_con, periodo=periodo,
+                   destino_right=destino_right, sufijo=sufijo)
+    METO_LULA = (f"Transiciones de voto hacia/desde Lula ({periodo}) por quintil de "
+                 f"factores socioeconómicos; inferencia ecológica (EM).")
+    METO_BOLSO = (f"Transiciones de voto desde {origen_right} y hacia {destino_right} "
+                  f"({periodo}) por quintil de factores socioeconómicos; "
+                  f"inferencia ecológica (EM).")
+    graficar_grupo(quints, claves_lula, f"socio_ei_lula{sufijo}.png",
+                   "transiciones hacia/desde Lula", METO_LULA, periodo=periodo)
+    graficar_grupo(quints, claves_lula, f"socio_ei_abs_lula{sufijo}.png",
+                   "transiciones hacia/desde Lula", METO_LULA, absoluto=True,
+                   periodo=periodo)
+    graficar_grupo(quints, claves_bolso, f"socio_ei_bolso_flavio{sufijo}.png",
+                   f"transiciones desde {origen_right} y hacia {destino_right}",
+                   METO_BOLSO, periodo=periodo)
+    graficar_grupo(quints, claves_bolso, f"socio_ei_abs_bolso_flavio{sufijo}.png",
+                   f"transiciones desde {origen_right} y hacia {destino_right}",
+                   METO_BOLSO, absoluto=True, periodo=periodo)
+    open(os.path.join(OUT, f"informe_socio{sufijo}_es.md"), "w", encoding="utf-8").write(
+        reporte(muni, corr, reg_con, r2_con, n_con, quints, "es", periodo,
+                origen_right, destino_right))
+    open(os.path.join(OUT, f"relatorio_socio{sufijo}_pt.md"), "w", encoding="utf-8").write(
+        reporte(muni, corr, reg_con, r2_con, n_con, quints, "pt", periodo,
+                origen_right, destino_right))
 
 
 def solo_graficos():
@@ -360,7 +394,61 @@ def solo_graficos():
     print("[OK] Gráficos regenerados desde datos guardados")
 
 
+
+# Pares nuevos con 2ª vuelta 2026, estimados a nivel de zona.
+PARES_2T = [
+    {"y0": 2026, "t0": "1", "y1": 2026, "t1": "2", "nivel": "zona",
+     "periodo": "2026 1T → 2T", "origen_right": "Flavio",
+     "destino_right": "Flavio", "sufijo": "_2026_1t_2t"},
+    {"y0": 2022, "t0": "2", "y1": 2026, "t1": "2", "nivel": "zona",
+     "periodo": "2022 2T → 2026 2T", "origen_right": "Bolsonaro",
+     "destino_right": "Flavio", "sufijo": "_2022_2t_2026_2t"},
+]
+
+
+def procesar_par(par):
+    suf = par["sufijo"]
+    print(f"\n[*] Par {par['periodo']} (nivel {par['nivel']}) ...")
+    muni = dataset_municipal(par["y0"], par["t0"], par["y1"], par["t1"],
+                             par["nivel"])
+    cobertura = muni["ingreso"].notna().mean() * 100
+    print(f"    municipios: {len(muni)} | con socio: {cobertura:.1f}%")
+    muni.to_csv(os.path.join(OUT, f"socio_municipios{suf}.csv"), index=False)
+
+    corr = correlaciones(muni, "swing_lula")
+    reg_con, r2_con, n_con = ols_fe(muni, "swing_lula", VARS + ["log_votos"], fe="uf")
+    print(f"    regresión: R2={r2_con:.2f}, n={n_con}")
+    reg_con.assign(r2=r2_con, n=n_con).to_csv(
+        os.path.join(OUT, f"socio_regresion{suf}.csv"), index=False)
+
+    print("[*] EI estratificada por factores socioeconómicos...")
+    claves = ie.CLAVE_ZONA if par["nivel"] == "zona" else ie.CLAVE
+    m_sec = ie.emparejar(
+        ie.cargar_anio(par["y0"], par["t0"], nivel=par["nivel"]),
+        ie.cargar_anio(par["y1"], par["t1"], nivel=par["nivel"]), claves)
+    mapa = cargar_tse_ibge()
+    m_sec["ibge"] = m_sec["mun"].map(lambda x: mapa.get(int(x)))
+    socio, _ = cargar_socio()
+    m_sec = m_sec.merge(socio, on="ibge", how="left")
+
+    partes = [ei_por_quintiles(m_sec, v, par["origen_right"],
+                               par["destino_right"])
+              for v in ["ingreso", "univ", "religion"]]
+    quints = pd.concat(partes, ignore_index=True)
+    quints.to_csv(os.path.join(OUT, f"socio_ei_quintiles{suf}.csv"), index=False)
+
+    graficar_todo(muni, corr, reg_con, r2_con, n_con, quints,
+                  periodo=par["periodo"], sufijo=suf,
+                  origen_right=par["origen_right"],
+                  destino_right=par["destino_right"])
+    print(f"[OK] Salidas {par['periodo']} en {OUT}")
+
+
 def main():
+    if "--solo-2t" in sys.argv:
+        for par in PARES_2T:
+            procesar_par(par)
+        return
     if "--solo-graficos" in sys.argv:
         solo_graficos()
         return

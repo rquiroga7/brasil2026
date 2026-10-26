@@ -2,20 +2,14 @@
 """
 rutas_datos.py — Dónde viven los datos del proyecto.
 
-Todos los datos crudos y derivados se guardan en D:\\brasil2026_data porque el
-disco C: está lleno. La raíz es configurable con la variable de entorno
-BRASIL2026_DATA.
+Todos los datos crudos y derivados se guardan fuera del repo, en el disco de
+datos local. La raíz es configurable con la variable de entorno BRASIL2026_DATA.
 
 Uso desde otro script:
 
     import rutas_datos as rd
-    archivo = rd.ruta("escrutinio_zonas_2026.csv")   # D:\\brasil2026_data\\...
+    archivo = rd.ruta("escrutinio_zonas_2026.csv")   # <DATA_ROOT>/...
     carpeta = rd.ruta_dir("secciones")               # crea y devuelve la carpeta
-
-Migración (una vez):  python rutas_datos.py --migrar
-  - Mueve los archivos de datos del repo a D:.
-  - Deja los directorios grandes como junctions de NTFS apuntando a D: para
-    que los scripts viejos que los referencian por ruta relativa sigan andando.
 """
 
 import os
@@ -24,7 +18,12 @@ import subprocess
 import sys
 
 REPO = os.path.dirname(os.path.abspath(__file__))
-DATA_ROOT = os.environ.get("BRASIL2026_DATA", r"D:\brasil2026_data")
+# Disco de datos local (montado en /mnt/dae292c1-...). El root del montaje es
+# de root; usamos una carpeta escribible dentro del mismo disco.
+DATA_ROOT = os.environ.get(
+    "BRASIL2026_DATA",
+    "/mnt/dae292c1-10dd-4169-83ec-c1360228407b/home/rquiroga/brasil2026_data",
+)
 
 # Carpeta de datos derivados por tema (se crean al usarlas).
 SUBCARPETAS = {
@@ -32,6 +31,7 @@ SUBCARPETAS = {
     "secciones": "votación por sección electoral 2022/2026",
     "lanzamiento": "reconstrucción de la publicación en vivo",
     "ei": "inferencia ecológica (migración de votos)",
+    "socio": "datos socioeconómicos municipales (Censo 2022)",
     "backtest": "backtest de métodos",
 }
 

@@ -33,6 +33,23 @@ intervalos por bootstrap. Los "No votó" son aptos − comparecimento.
 | **Blanco/Nulo** (5.5M) | 21.0% (1.1M) | 15.8% (0.9M) | 63.1% (3.4M) | 0.0% (0.0M) |
 | **No voto** (32.7M) | 3.3% (1.1M) | 2.6% (0.9M) | 0.2% (0.1M) | 93.8% (30.7M) |
 
+## 2026 1ª → 2ª vuelta (nivel zona)
+| Origen \ Destino | Lula | Flavio | Blanco/Nulo | No voto |
+|---|---|---|---|---|
+| **Lula** (53.9M) | 99.9% (53.8M) | 0.0% (0.0M) | 0.0% (0.0M) | 0.0% (0.0M) |
+| **Flavio** (56.1M) | 0.0% (0.0M) | 98.9% (55.5M) | 0.5% (0.3M) | 0.6% (0.3M) |
+| **Otros** (9.3M) | 43.7% (4.1M) | 44.7% (4.2M) | 11.5% (1.1M) | 0.0% (0.0M) |
+| **Blanco/Nulo** (6.0M) | 57.3% (3.4M) | 0.0% (0.0M) | 42.7% (2.6M) | 0.0% (0.0M) |
+| **No voto** (33.3M) | 7.9% (2.6M) | 0.6% (0.2M) | 0.7% (0.2M) | 90.9% (30.3M) |
+
+## 2022 2ª → 2026 2ª vuelta (nivel zona)
+| Origen \ Destino | Lula | Flavio | Blanco/Nulo | No voto |
+|---|---|---|---|---|
+| **Lula** (60.2M) | 98.2% (59.1M) | 0.9% (0.5M) | 0.9% (0.5M) | 0.0% (0.0M) |
+| **Bolsonaro** (58.0M) | 0.0% (0.0M) | 94.0% (54.6M) | 1.6% (0.9M) | 4.4% (2.5M) |
+| **Blanco/Nulo** (5.7M) | 54.5% (3.1M) | 0.2% (0.0M) | 43.8% (2.5M) | 1.5% (0.1M) |
+| **No voto** (32.1M) | 2.8% (0.9M) | 11.4% (3.7M) | 0.4% (0.1M) | 85.4% (27.4M) |
+
 ## Contexto 2018 → 2022
 | Origen \ Destino | Lula | Bolsonaro | Otros | Blanco/Nulo | No voto |
 |---|---|---|---|---|---|

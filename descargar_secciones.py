@@ -7,18 +7,21 @@ Los zip 'votacao_secao_AAAA_BR.zip' contienen SOLO Presidente (todos los estados
 + exterior). Para cada sección se pivotea el voto por número de candidato, más
 blanco (95) y nulo (96).
 
-Salidas (D:\\brasil2026_data\\secciones\\):
+Salidas (<DATA_ROOT>/secciones/):
   secciones_presidente_2022_1t.csv
   secciones_presidente_2026_1t.csv
   resumen_secciones.json
 
-Requiere los zip ya descargados (o los baja si falta).
+Requiere los zip ya descargados (o los baja si falta). Las descargas son
+reanudables: si se corta una transferencia se conserva un .part y la próxima
+ejecución continúa con Range desde el último byte.
 """
 
 import os
 import io
 import json
 import sys
+import time
 import zipfile
 
 import requests
@@ -38,20 +41,90 @@ COLS_DET = ["SG_UF", "CD_MUNICIPIO", "NR_ZONA", "NR_SECAO", "NR_TURNO",
 BRANCO, NULO = "95", "96"
 
 
-def descargar(y):
-    destino = os.path.join(SEC_DIR, f"votacao_secao_{y}_BR.zip")
+def _zip_valido(path):
+    try:
+        with zipfile.ZipFile(path) as z:
+            return z.testzip() is None
+    except Exception:
+        return False
+
+
+def _descargar_resumible(url, destino, intentos=8):
+    """Baja url a destino con reanudación por Range y verificación del zip."""
+    part = destino + ".part"
+
+    # Un zip completo previo se reutiliza; uno truncado se convierte en .part.
     if os.path.exists(destino):
+        if _zip_valido(destino):
+            print(f"[=] Ya existe {os.path.basename(destino)} "
+                  f"({os.path.getsize(destino)/1e6:.1f} MB)")
+            return destino
+        print(f"[!] {os.path.basename(destino)} está incompleto; se reanuda.")
+        os.replace(destino, part)
+
+    if os.path.exists(part) and _zip_valido(part):
+        os.replace(part, destino)
         print(f"[=] Ya existe {os.path.basename(destino)} "
               f"({os.path.getsize(destino)/1e6:.1f} MB)")
         return destino
+    inicio = os.path.getsize(part) if os.path.exists(part) else 0
+
+    for intento in range(1, intentos + 1):
+        headers = {"Range": f"bytes={inicio}-"} if inicio else {}
+        try:
+            with requests.get(url, stream=True, timeout=120, headers=headers) as r:
+                if r.status_code == 416:  # ya no hay más bytes: validar/renombrar
+                    if _zip_valido(part):
+                        os.replace(part, destino)
+                        return destino
+                    inicio = 0
+                    if os.path.exists(part):
+                        os.remove(part)
+                    continue
+                if r.status_code == 200 and inicio:
+                    # El servidor ignoró Range: reiniciar desde cero.
+                    inicio = 0
+                r.raise_for_status()
+                total = r.headers.get("Content-Length")
+                total = int(total) + inicio if total is not None else None
+                modo = "ab" if inicio else "wb"
+                escritos = inicio
+                ultimo = time.time()
+                with open(part, modo) as f:
+                    for bloque in r.iter_content(chunk_size=1024 * 512):
+                        if not bloque:
+                            continue
+                        f.write(bloque)
+                        escritos += len(bloque)
+                        if time.time() - ultimo > 5:
+                            if total:
+                                print(f"    {escritos/1e6:6.1f}/{total/1e6:6.1f} MB "
+                                      f"({100*escritos/total:5.1f}%)", flush=True)
+                            else:
+                                print(f"    {escritos/1e6:6.1f} MB", flush=True)
+                            ultimo = time.time()
+            if total and escritos < total:
+                raise IOError(f"transferencia incompleta: {escritos}/{total} bytes")
+            if not _zip_valido(part):
+                raise IOError("el zip descargado no es válido")
+            os.replace(part, destino)
+            print(f"[OK] {os.path.basename(destino)} "
+                  f"({os.path.getsize(destino)/1e6:.1f} MB)")
+            return destino
+        except Exception as exc:
+            inicio = os.path.getsize(part) if os.path.exists(part) else 0
+            espera = min(60, 2 ** intento)
+            print(f"[!] intento {intento}/{intentos} falló: {exc}. "
+                  f"Reintento en {espera}s desde {inicio/1e6:.1f} MB.", flush=True)
+            time.sleep(espera)
+    raise RuntimeError(f"No se pudo descargar {url}")
+
+
+def descargar(y):
+    destino = os.path.join(SEC_DIR, f"votacao_secao_{y}_BR.zip")
     url = URL.format(y=y)
     print(f"[*] Descargando {url}")
-    with requests.get(url, stream=True, timeout=120) as r:
-        r.raise_for_status()
-        with open(destino, "wb") as f:
-            for bloque in r.iter_content(chunk_size=1024 * 512):
-                f.write(bloque)
-    return destino
+    return _descargar_resumible(url, destino)
 
 
 def _nom_vot(y, turno):
@@ -95,6 +168,10 @@ def construir(y, turno="1"):
                                "NR_VOTAVEL"])["QT_VOTOS"].sum()
             acum = g if acum is None else acum.add(g, fill_value=0)
 
+    if acum is None:
+        print(f"[!] {y} {turno}T: el zip no trae datos de ese turno "
+              f"(TSE aún no publicó la votación por sección). Se omite.")
+        return None
     df = acum.reset_index()
     df["SG_UF"] = df["SG_UF"].str.upper()
     df["CD_MUNICIPIO"] = df["CD_MUNICIPIO"].str.zfill(5)
@@ -128,18 +205,9 @@ def construir(y, turno="1"):
 
 def descargar_detalle(y):
     destino = os.path.join(SEC_DIR, f"detalhe_votacao_secao_{y}.zip")
-    if os.path.exists(destino):
-        print(f"[=] Ya existe {os.path.basename(destino)} "
-              f"({os.path.getsize(destino)/1e6:.1f} MB)")
-        return destino
     url = URL_DETALLE.format(y=y)
     print(f"[*] Descargando {url}")
-    with requests.get(url, stream=True, timeout=120) as r:
-        r.raise_for_status()
-        with open(destino, "wb") as f:
-            for bloque in r.iter_content(chunk_size=1024 * 512):
-                f.write(bloque)
-    return destino
+    return _descargar_resumible(url, destino)
 
 
 def construir_detalle(y, turno="1"):
@@ -168,6 +236,10 @@ def construir_detalle(y, turno="1"):
                 chunk = chunk[chunk["NR_TURNO"] == turno].drop_duplicates(subset=clave)
                 if not chunk.empty:
                     partes.append(chunk)
+    if not partes:
+        print(f"[!] {y} {turno}T: el zip de detalle no trae datos de ese turno. "
+              f"Se omite.")
+        return None
     df = pd.concat(partes, ignore_index=True).drop_duplicates(subset=clave)
     df["SG_UF"] = df["SG_UF"].str.upper()
     df["CD_MUNICIPIO"] = df["CD_MUNICIPIO"].str.zfill(5)
@@ -187,6 +259,9 @@ def construir_detalle(y, turno="1"):
     return {"anio": y, "turno": turno, "n_secciones_detalle": int(len(df))}
 
 
+TURNOS = {2018: ("1",), 2022: ("1", "2"), 2026: ("1", "2")}
+
+
 def main():
     anios = (2018, 2022, 2026)
     if "--anio" in sys.argv:
@@ -203,13 +278,13 @@ def main():
                 resumen = json.load(f)
     else:
         for y in anios:
-            resumen.append(construir(y, "1"))
-        if 2022 in anios:
-            resumen.append(construir(2022, "2"))
+            for turno in TURNOS.get(y, ("1",)):
+                r = construir(y, turno)
+                if r is not None:
+                    resumen.append(r)
     for y in anios:
-        construir_detalle(y, "1")
-    if 2022 in anios:
-        construir_detalle(2022, "2")
+        for turno in TURNOS.get(y, ("1",)):
+            construir_detalle(y, turno)
     with open(os.path.join(SEC_DIR, "resumen_secciones.json"), "w", encoding="utf-8") as f:
         json.dump(resumen, f, ensure_ascii=False, indent=2)
     print("[OK] resumen_secciones.json")

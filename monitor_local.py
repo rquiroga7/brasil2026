@@ -26,7 +26,10 @@ try:
     import rutas_datos as rd
     DATA = rd.DATA_ROOT
 except Exception:
-    DATA = os.environ.get("BRASIL2026_DATA", r"D:\brasil2026_data")
+    DATA = os.environ.get(
+        "BRASIL2026_DATA",
+        "/mnt/dae292c1-10dd-4169-83ec-c1360228407b/home/rquiroga/brasil2026_data",
+    )
 
 CSV = os.path.join(DATA, "escrutinio_zonas_2026_2t.csv")
 PAYLOAD = os.path.join(DATA, "datos_web_2t.json")

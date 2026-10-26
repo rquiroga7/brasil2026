@@ -3,7 +3,7 @@
 reconstruir_1t.py — Reconstruye la base de la 1ª vuelta 2026 por zona (y por
 municipio) a partir de los datos abiertos del TSE ya descargados.
 
-Salidas (D:\\brasil2026_data):
+Salidas (<BRASIL2026_DATA>):
   escrutinio_zonas_2026.csv   (formato "vivo", por zona, para la 1ª vuelta y como
                                base del swing 1T->2T)
   base_1t_municipios.csv      (agregado por municipio TSE)

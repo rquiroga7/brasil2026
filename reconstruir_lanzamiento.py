@@ -12,7 +12,7 @@ Para reconstruir el ORDEN DE PUBLICACIÓN usamos hora_tse (no depende de la
 velocidad de nuestro raspado). Para medir cuánto distorsionaba nuestro raspado
 comparamos con hora_local.
 
-Productos (en D:\\brasil2026_data\\lanzamiento\\):
+Productos (en <BRASIL2026_DATA>/lanzamiento/):
   zonas_primera_publicacion.csv   una fila por zona con primera/última vez vista
   municipios_publicacion.csv      agregado por municipio
   bias_por_decil.csv              % Lula 2026 y 2022 por decil de publicación
