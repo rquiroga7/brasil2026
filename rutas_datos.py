@@ -18,11 +18,16 @@ import subprocess
 import sys
 
 REPO = os.path.dirname(os.path.abspath(__file__))
-# Disco de datos local (montado en /mnt/dae292c1-...). El root del montaje es
-# de root; usamos una carpeta escribible dentro del mismo disco.
+# Raíz de datos por sistema operativo. BRASIL2026_DATA tiene prioridad.
+#   Windows: disco D: (los datos no caben en C:).
+#   Linux:   disco de datos montado en /mnt (el root del montaje es de root;
+#            usamos una carpeta escribible dentro del mismo disco).
+DATA_ROOT_WINDOWS = r"D:\brasil2026_data"
+DATA_ROOT_LINUX = ("/mnt/dae292c1-10dd-4169-83ec-c1360228407b/home/rquiroga/"
+                   "brasil2026_data")
 DATA_ROOT = os.environ.get(
     "BRASIL2026_DATA",
-    "/mnt/dae292c1-10dd-4169-83ec-c1360228407b/home/rquiroga/brasil2026_data",
+    DATA_ROOT_WINDOWS if os.name == "nt" else DATA_ROOT_LINUX,
 )
 
 # Carpeta de datos derivados por tema (se crean al usarlas).
@@ -35,7 +40,7 @@ SUBCARPETAS = {
     "backtest": "backtest de métodos",
 }
 
-# Archivos sueltos que deben vivir en D: (mismo nombre que en el repo).
+# Archivos sueltos que deben vivir fuera del repo (mismo nombre que en el repo).
 ARCHIVOS_DATOS = [
     "escrutinio_zonas_2022.csv",
     "escrutinio_zonas_2026.csv",

@@ -354,7 +354,8 @@ def _tab_md(theta, labels_o, labels_d, N_o, pct=True):
 
 
 def reporte_es(thB, N22, thC, N22_1t, thA, N18, th_markov,
-               thD=None, N26_1=None, thE=None, N22_2t=None):
+               thD=None, N26_1=None, thE=None, N22_2t=None,
+               thF=None, N22_1t_2026=None):
     L22, L26, L22b = ANIOS[2022]["labels"], ANIOS[2026]["labels"], LABELS_2022_2T
     L26b = LABELS_2026_2T
     extra_2t = ""
@@ -362,6 +363,9 @@ def reporte_es(thB, N22, thC, N22_1t, thA, N18, th_markov,
         extra_2t = f"""
 ## 2026 1ª → 2ª vuelta (nivel zona)
 {_tab_md(thD, L26, L26b, N26_1)}
+
+## 2022 1ª → 2026 2ª vuelta (nivel zona)
+{_tab_md(thF, L22, L26b, N22_1t_2026)}
 
 ## 2022 2ª → 2026 2ª vuelta (nivel zona)
 {_tab_md(thE, L22b, L26b, N22_2t)}
@@ -409,7 +413,8 @@ léanse como «casi nulo» / «casi total», no como certeza.
 
 
 def reporte_pt(thB, N22, thC, N22_1t, thA, N18, th_markov,
-               thD=None, N26_1=None, thE=None, N22_2t=None):
+               thD=None, N26_1=None, thE=None, N22_2t=None,
+               thF=None, N22_1t_2026=None):
     L22, L26, L22b = ANIOS[2022]["labels"], ANIOS[2026]["labels"], LABELS_2022_2T
     L26b = LABELS_2026_2T
     extra_2t = ""
@@ -417,6 +422,9 @@ def reporte_pt(thB, N22, thC, N22_1t, thA, N18, th_markov,
         extra_2t = f"""
 ## 2026 1º → 2º turno (nível zona)
 {_tab_md(thD, L26, L26b, N26_1)}
+
+## 2022 1º → 2026 2º turno (nível zona)
+{_tab_md(thF, L22, L26b, N22_1t_2026)}
 
 ## 2022 2º → 2026 2º turno (nível zona)
 {_tab_md(thE, L22b, L26b, N22_2t)}
@@ -466,18 +474,25 @@ leia-se como «quase nulo» / «quase total», não como certeza.
 def solo_graficos():
     """Regenera heatmaps y Sankeys desde resumen_ei.json (sin repetir el EM)."""
     res = json.load(open(os.path.join(OUT_DIR, "resumen_ei.json"), encoding="utf-8"))
-    d18 = cargar_anio(2018, "1")
-    d22 = cargar_anio(2022, "1")
-    N18 = d18[COLS5].sum().to_numpy()
-    N22 = d22[COLS5].sum().to_numpy()
+    n_o = res.setdefault("N_o", {})
+    if "2018" in n_o and "2022" in n_o:
+        N18 = np.array(n_o["2018"])
+        N22 = np.array(n_o["2022"])
+    else:
+        N18 = cargar_anio(2018, "1")[COLS5].sum().to_numpy()
+        N22 = cargar_anio(2022, "1")[COLS5].sum().to_numpy()
+        n_o["2018"] = N18.tolist()
+        n_o["2022"] = N22.tolist()
     thA = np.array(res["transicion_2018_2022"])
     thB = np.array(res["transicion_2022_2026"])
     thC = np.array(res["transicion_2022_1t_2t"])
     thD = np.array(res["transicion_2026_1t_2t"])
     thE = np.array(res["transicion_2022_2t_2026_2t"])
+    thF = np.array(res["transicion_2022_1t_2026_2t"])
     thM = np.array(res["transicion_2018_2026_markov"])
     N26_1t = np.array(res["N_o"]["2026_1t"])
     N22_2t = np.array(res["N_o"]["2022_2t"])
+    N22_1t = np.array(res["N_o"]["2022_1t"])
     heatmap(thA, None, None, ANIOS[2018]["labels"], ANIOS[2022]["labels"], N18,
             "Transición de votos — Brasil 2018 → 2022 (%)", os.path.join(OUT_DIR, "heatmap_2018_2022.png"))
     heatmap(thB, None, None, ANIOS[2022]["labels"], ANIOS[2026]["labels"], N22,
@@ -490,6 +505,9 @@ def solo_graficos():
     heatmap(thE, None, None, LABELS_2022_2T, LABELS_2026_2T, N22_2t,
             "Transición — Brasil 2022 2ª → 2026 2ª vuelta (%)",
             os.path.join(OUT_DIR, "heatmap_2022_2t_2026_2t.png"))
+    heatmap(thF, None, None, ANIOS[2022]["labels"], LABELS_2026_2T, N22_1t,
+            "Transición — Brasil 2022 1ª → 2026 2ª vuelta (%)",
+            os.path.join(OUT_DIR, "heatmap_2022_1t_2026_2t.png"))
     heatmap(thM, None, None, ANIOS[2018]["labels"], ANIOS[2026]["labels"], N18,
             "Transición encadenada — Brasil 2018 → 2026 (Markov, %)",
             os.path.join(OUT_DIR, "heatmap_2018_2026.png"))
@@ -505,12 +523,19 @@ def solo_graficos():
     sankey_par(thE, N22_2t, LABELS_2022_2T, LABELS_2026_2T,
                "Migración de votos — Brasil 2022 2ª → 2026 2ª vuelta (personas, zonas)",
                "sankey_2022_2t_2026_2t")
+    sankey_par(thF, N22_1t, ANIOS[2022]["labels"], LABELS_2026_2T,
+               "Migración de votos — Brasil 2022 1ª → 2026 2ª vuelta (personas, zonas)",
+               "sankey_2022_1t_2026_2t")
     sankey_tres(thA, N18, thB, N22, ANIOS[2018]["labels"], ANIOS[2022]["labels"],
                 ANIOS[2026]["labels"], "sankey_2018_2022_2026")
     open(os.path.join(OUT_DIR, "informe_migracion_2022_2026_es.md"), "w", encoding="utf-8").write(
-        reporte_es(thB, N22, thC, N22, thA, N18, thM, thD, N26_1t, thE, N22_2t))
+        reporte_es(thB, N22, thC, N22, thA, N18, thM, thD, N26_1t, thE, N22_2t,
+                   thF, N22_1t))
     open(os.path.join(OUT_DIR, "relatorio_migracao_2022_2026_pt.md"), "w", encoding="utf-8").write(
-        reporte_pt(thB, N22, thC, N22, thA, N18, thM, thD, N26_1t, thE, N22_2t))
+        reporte_pt(thB, N22, thC, N22, thA, N18, thM, thD, N26_1t, thE, N22_2t,
+                   thF, N22_1t))
+    json.dump(res, open(os.path.join(OUT_DIR, "resumen_ei.json"), "w", encoding="utf-8"),
+              ensure_ascii=False, indent=2)
     print("[OK] Gráficos regenerados desde resumen_ei.json")
 
 
@@ -520,14 +545,17 @@ def solo_2t():
     Reutiliza los resultados ya guardados en resumen_ei.json para no repetir el
     EM pesado por sección de 2018→2022 y 2022→2026.
     """
-    print("[*] Cargando zonas 2026 1T / 2022 2T / 2026 2T ...", flush=True)
+    print("[*] Cargando zonas 2026 1T / 2022 1T / 2022 2T / 2026 2T ...", flush=True)
     d26z = cargar_anio(2026, "1", nivel="zona")
+    d22z = cargar_anio(2022, "1", nivel="zona")
     d22bz = cargar_anio(2022, "2", nivel="zona")
     d26b = cargar_anio(2026, "2", nivel="zona")
 
     m_d = emparejar(d26z, d26b, CLAVE_ZONA)
     m_e = emparejar(d22bz, d26b, CLAVE_ZONA)
+    m_f = emparejar(d22z, d26b, CLAVE_ZONA)
     print(f"    emparejadas 2026 1T-2T: {len(m_d)} | "
+          f"2022 1T-2026 2T: {len(m_f)} | "
           f"2022 2T-2026 2T: {len(m_e)} (zonas)", flush=True)
 
     cols_o5 = [c + "_o" for c in COLS5]
@@ -537,11 +565,14 @@ def solo_2t():
 
     print("[*] EI 2026 1ª → 2ª vuelta (zonas) ...", flush=True)
     thD, loD, hiD, _, _, XD, _ = ei_par(m_d, cols_o5, cols_d4)
+    print("[*] EI 2022 1ª → 2026 2ª vuelta (zonas) ...", flush=True)
+    thF, loF, hiF, _, _, XF, _ = ei_par(m_f, cols_o5, cols_d4)
     print("[*] EI 2022 2ª → 2026 2ª vuelta (zonas) ...", flush=True)
     thE, loE, hiE, _, _, XE, _ = ei_par(m_e, cols_o4, cols_d4)
 
     for th, lo, ld, nombre in (
             (thD, ANIOS[2026]["labels"], LABELS_2026_2T, "2026_1t_2t"),
+            (thF, ANIOS[2022]["labels"], LABELS_2026_2T, "2022_1t_2026_2t"),
             (thE, LABELS_2022_2T, LABELS_2026_2T, "2022_2t_2026_2t")):
         pd.DataFrame(th, index=lo, columns=ld).to_csv(
             os.path.join(OUT_DIR, f"transicion_nacional_{nombre}.csv"))
@@ -552,12 +583,18 @@ def solo_2t():
     heatmap(thD, loD, hiD, ANIOS[2026]["labels"], LABELS_2026_2T, XD.sum(0),
             "Transición — Brasil 2026 1ª → 2ª vuelta (%)",
             os.path.join(OUT_DIR, "heatmap_2026_1t_2t.png"))
+    heatmap(thF, loF, hiF, ANIOS[2022]["labels"], LABELS_2026_2T, XF.sum(0),
+            "Transición — Brasil 2022 1ª → 2026 2ª vuelta (%)",
+            os.path.join(OUT_DIR, "heatmap_2022_1t_2026_2t.png"))
     heatmap(thE, loE, hiE, LABELS_2022_2T, LABELS_2026_2T, XE.sum(0),
             "Transición — Brasil 2022 2ª → 2026 2ª vuelta (%)",
             os.path.join(OUT_DIR, "heatmap_2022_2t_2026_2t.png"))
     sankey_par(thD, XD.sum(0), ANIOS[2026]["labels"], LABELS_2026_2T,
                "Migración de votos — Brasil 2026 1ª → 2ª vuelta (personas, zonas)",
                "sankey_2026_1t_2t")
+    sankey_par(thF, XF.sum(0), ANIOS[2022]["labels"], LABELS_2026_2T,
+               "Migración de votos — Brasil 2022 1ª → 2026 2ª vuelta "
+               "(personas, zonas)", "sankey_2022_1t_2026_2t")
     sankey_par(thE, XE.sum(0), LABELS_2022_2T, LABELS_2026_2T,
                "Migración de votos — Brasil 2022 2ª → 2026 2ª vuelta "
                "(personas, zonas)", "sankey_2022_2t_2026_2t")
@@ -566,17 +603,20 @@ def solo_2t():
     res = json.load(open(p, encoding="utf-8")) if os.path.exists(p) else {}
     res.setdefault("n_emparejadas", {})
     res["n_emparejadas"]["2026_1t_2t_zonas"] = int(len(m_d))
+    res["n_emparejadas"]["2022_1t_2026_2t_zonas"] = int(len(m_f))
     res["n_emparejadas"]["2022_2t_2026_2t_zonas"] = int(len(m_e))
     res.setdefault("labels", {})
     res["labels"]["2026_2t"] = LABELS_2026_2T
     res.setdefault("N_o", {})
     res["N_o"]["2026_1t"] = XD.sum(0).tolist()
+    res["N_o"]["2022_1t"] = XF.sum(0).tolist()
     res["N_o"]["2022_2t"] = XE.sum(0).tolist()
     res["transicion_2026_1t_2t"] = thD.tolist()
+    res["transicion_2022_1t_2026_2t"] = thF.tolist()
     res["transicion_2022_2t_2026_2t"] = thE.tolist()
-    res["nota_2t"] = ("2026 1T->2T y 2022 2T->2026 2T se estiman por zona porque "
-                      "el TSE aún no publica la votación por sección de la 2ª "
-                      "vuelta 2026.")
+    res["nota_2t"] = ("2026 1T->2T, 2022 1T->2026 2T y 2022 2T->2026 2T se "
+                      "estiman por zona porque el TSE aún no publica la votación "
+                      "por sección de la 2ª vuelta 2026.")
     json.dump(res, open(p, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
     print(f"\n[OK] Salidas 2T en {OUT_DIR}", flush=True)
 
@@ -596,6 +636,7 @@ def main():
     # Los pares con 2T 2026 se estiman a nivel de ZONA: el TSE todavía no
     # publica la votación por sección de la 2ª vuelta 2026.
     d26z = cargar_anio(2026, "1", nivel="zona")
+    d22z = cargar_anio(2022, "1", nivel="zona")
     d22bz = cargar_anio(2022, "2", nivel="zona")
     d26b = cargar_anio(2026, "2", nivel="zona")
 
@@ -604,10 +645,11 @@ def main():
     m_c = emparejar(d22, d22b)
     m_d = emparejar(d26z, d26b, CLAVE_ZONA)
     m_e = emparejar(d22bz, d26b, CLAVE_ZONA)
+    m_f = emparejar(d22z, d26b, CLAVE_ZONA)
     print(f"    emparejadas 2018-2022: {len(m_a)} | 2022-2026: {len(m_b)} | "
           f"2022 1T-2T: {len(m_c)}")
-    print(f"    emparejadas 2026 1T-2T: {len(m_d)} | 2022 2T-2026 2T: {len(m_e)} "
-          f"(zonas)")
+    print(f"    emparejadas 2026 1T-2T: {len(m_d)} | 2022 1T-2026 2T: {len(m_f)} | "
+          f"2022 2T-2026 2T: {len(m_e)} (zonas)")
 
     cols_o5 = [c + "_o" for c in COLS5]
     cols_d5 = [c + "_d" for c in COLS5]
@@ -622,6 +664,8 @@ def main():
     thC, loC, hiC, _, mfC, XC, _ = ei_par(m_c, cols_o5, cols_d4)
     print("[*] EI 2026 1ª → 2ª vuelta (zonas) ...")
     thD, loD, hiD, _, mfD, XD, _ = ei_par(m_d, cols_o5, cols_d4)
+    print("[*] EI 2022 1ª → 2026 2ª vuelta (zonas) ...")
+    thF, loF, hiF, _, mfF, XF, _ = ei_par(m_f, cols_o5, cols_d4)
     print("[*] EI 2022 2ª → 2026 2ª vuelta (zonas) ...")
     thE, loE, hiE, _, mfE, XE, _ = ei_par(m_e, cols_o4, cols_d4)
 
@@ -630,6 +674,7 @@ def main():
         (thB, ANIOS[2022]["labels"], ANIOS[2026]["labels"], "2022_2026"),
         (thC, ANIOS[2022]["labels"], LABELS_2022_2T, "2022_1t_2t"),
         (thD, ANIOS[2026]["labels"], LABELS_2026_2T, "2026_1t_2t"),
+        (thF, ANIOS[2022]["labels"], LABELS_2026_2T, "2022_1t_2026_2t"),
         (thE, LABELS_2022_2T, LABELS_2026_2T, "2022_2t_2026_2t"),
     )
     for th, lo, ld, nombre in trans:
@@ -663,6 +708,9 @@ def main():
     heatmap(thD, loD, hiD, ANIOS[2026]["labels"], LABELS_2026_2T, XD.sum(0),
             "Transición — Brasil 2026 1ª → 2ª vuelta (%)",
             os.path.join(OUT_DIR, "heatmap_2026_1t_2t.png"))
+    heatmap(thF, loF, hiF, ANIOS[2022]["labels"], LABELS_2026_2T, XF.sum(0),
+            "Transición — Brasil 2022 1ª → 2026 2ª vuelta (%)",
+            os.path.join(OUT_DIR, "heatmap_2022_1t_2026_2t.png"))
     heatmap(thE, loE, hiE, LABELS_2022_2T, LABELS_2026_2T, XE.sum(0),
             "Transición — Brasil 2022 2ª → 2026 2ª vuelta (%)",
             os.path.join(OUT_DIR, "heatmap_2022_2t_2026_2t.png"))
@@ -678,6 +726,9 @@ def main():
     sankey_par(thD, XD.sum(0), ANIOS[2026]["labels"], LABELS_2026_2T,
                "Migración de votos — Brasil 2026 1ª → 2ª vuelta (personas, zonas)",
                "sankey_2026_1t_2t")
+    sankey_par(thF, XF.sum(0), ANIOS[2022]["labels"], LABELS_2026_2T,
+               "Migración de votos — Brasil 2022 1ª → 2026 2ª vuelta (personas, zonas)",
+               "sankey_2022_1t_2026_2t")
     sankey_par(thE, XE.sum(0), LABELS_2022_2T, LABELS_2026_2T,
                "Migración de votos — Brasil 2022 2ª → 2026 2ª vuelta (personas, zonas)",
                "sankey_2022_2t_2026_2t")
@@ -686,30 +737,34 @@ def main():
 
     open(os.path.join(OUT_DIR, "informe_migracion_2022_2026_es.md"), "w", encoding="utf-8").write(
         reporte_es(thB, XB.sum(0), thC, XC.sum(0), thA, XA.sum(0), th_markov,
-               thD, XD.sum(0), thE, XE.sum(0)))
+               thD, XD.sum(0), thE, XE.sum(0), thF, XF.sum(0)))
     open(os.path.join(OUT_DIR, "relatorio_migracao_2022_2026_pt.md"), "w", encoding="utf-8").write(
         reporte_pt(thB, XB.sum(0), thC, XC.sum(0), thA, XA.sum(0), th_markov,
-               thD, XD.sum(0), thE, XE.sum(0)))
+               thD, XD.sum(0), thE, XE.sum(0), thF, XF.sum(0)))
 
     res = {
         "n_emparejadas": {"2018_2022": int(len(m_a)), "2022_2026": int(len(m_b)),
                           "2022_1t_2t": int(len(m_c)),
                           "2026_1t_2t_zonas": int(len(m_d)),
+                          "2022_1t_2026_2t_zonas": int(len(m_f)),
                           "2022_2t_2026_2t_zonas": int(len(m_e))},
         "labels": {"2018": ANIOS[2018]["labels"], "2022": ANIOS[2022]["labels"],
                    "2022_2t": LABELS_2022_2T, "2026": ANIOS[2026]["labels"],
                    "2026_2t": LABELS_2026_2T},
         "N_o": {"2018": XA.sum(0).tolist(), "2022": XB.sum(0).tolist(),
-                "2026_1t": XD.sum(0).tolist(), "2022_2t": XE.sum(0).tolist()},
+                "2026_1t": XD.sum(0).tolist(), "2022_1t": XF.sum(0).tolist(),
+                "2022_2t": XE.sum(0).tolist()},
         "transicion_2018_2022": thA.tolist(),
         "transicion_2022_2026": thB.tolist(),
         "transicion_2022_1t_2t": thC.tolist(),
         "transicion_2026_1t_2t": thD.tolist(),
+        "transicion_2022_1t_2026_2t": thF.tolist(),
         "transicion_2022_2t_2026_2t": thE.tolist(),
         "transicion_2018_2026_markov": th_markov.tolist(),
         "nota_3vias": "2018->2026 es el encadenado de los pares (Markov).",
-        "nota_2t": ("2026 1T->2T y 2022 2T->2026 2T se estiman por zona porque el "
-                    "TSE aún no publica la votación por sección de la 2ª vuelta 2026."),
+        "nota_2t": ("2026 1T->2T, 2022 1T->2026 2T y 2022 2T->2026 2T se estiman "
+                    "por zona porque el TSE aún no publica la votación por sección "
+                    "de la 2ª vuelta 2026."),
     }
     json.dump(res, open(os.path.join(OUT_DIR, "resumen_ei.json"), "w"),
               ensure_ascii=False, indent=2)

@@ -543,7 +543,7 @@ function pintarTablaCrudo() {
 function construirDatasets(serie, clave) {
   return ["lula", "flavio", "otros"].map((k) => ({
     label: k === "otros" ? "Otros" : k[0].toUpperCase() + k.slice(1),
-    data: serie.map((s) => (s[clave] && s[clave][k] != null ? s[clave][k] : null)),
+    data: serie.map((s) => _pctSerie(s[clave] && s[clave][k])),
     borderColor: COLORES[k], backgroundColor: COLORES[k],
     borderWidth: 2, pointRadius: 0, tension: 0.15, spanGaps: true,
   }));
@@ -584,6 +584,10 @@ function pintarSeries() {
   $("h_metodo_proj").textContent = "Proyección — " + (ETIQ_METODO[metodo] || metodo);
 }
 
+function _pctSerie(v) {
+  if (v == null) return null;
+  return (typeof v === "object") ? v.pct : v;
+}
 function pintarProbSeries() {
   const serie = serieFiltrada();
   if (!chartProb) {
@@ -595,11 +599,11 @@ function pintarProbSeries() {
   const dL = [], dF = [];
   for (const s of serie) {
     const b = bloqueSerie(s);
-    if (!b || !b.lula || !b.flavio) { dL.push(null); dF.push(null); continue; }
+    const l = _pctSerie(b && b.lula), f = _pctSerie(b && b.flavio);
+    if (l == null || f == null) { dL.push(null); dF.push(null); continue; }
     const mp = (s.margen_p90 != null) ? s.margen_p90 : 2;
     const sd = (mp / 1.645) * 1.4;
-    const m = b.lula.pct - b.flavio.pct;
-    const pl = 1 - normCdf(-m / sd);
+    const pl = 1 - normCdf(-(l - f) / sd);
     dL.push(pl * 100); dF.push((1 - pl) * 100);
   }
   chartProb.data.labels = labels;

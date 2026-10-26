@@ -44,8 +44,9 @@ escrutinio oficial del TSE (`resultados.tse.jus.br`) y de los datos abiertos del
 - **Referencia 2022 / jerarquía IBGE**: `data/elecciones-2022.js`, `data/mun-jerarquia.json`.
 
 Los datos crudos y derivados se guardan en el disco de datos local
-(`/mnt/dae292c1-10dd-4169-83ec-c1360228407b/home/rquiroga/brasil2026_data`, ver
-`rutas_datos.py`; configurable con `BRASIL2026_DATA`). Los gráficos e informes
+(`D:\brasil2026_data` en Windows y
+`/mnt/dae292c1-10dd-4169-83ec-c1360228407b/home/rquiroga/brasil2026_data` en
+Linux, ver `rutas_datos.py`; configurable con `BRASIL2026_DATA`). Los gráficos e informes
 se escriben en `plot/`.
 
 La **2ª vuelta 2026** no está publicada por sección en los datos abiertos del TSE:

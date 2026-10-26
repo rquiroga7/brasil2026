@@ -70,7 +70,7 @@ def modelo_error():
     return _MODELO
 
 
-def cargar(path):
+def cargar(path, dedupe=True):
     if not os.path.exists(path):
         return None
     # Leer tolerando que el raspador esté escribiendo: descartar una última
@@ -102,10 +102,12 @@ def cargar(path):
     for c in ["secoes_totalizadas", "electores", "votos_totales", "votos_blancos",
               "votos_nulos", "Lula", "Flavio_Bolsonaro"]:
         df[c] = pd.to_numeric(df.get(c, 0), errors="coerce").fillna(0)
-    # Una fila por zona: la última observación (evita duplicar votos entre pasadas).
     if "hora_local" in df.columns:
-        df = (df.sort_values("hora_local")
-                .drop_duplicates(subset=["uf", "mun", "zona"], keep="last"))
+        df["_t"] = pd.to_datetime(df["hora_local"], errors="coerce")
+        # Una fila por zona: la última observación (evita duplicar votos entre pasadas).
+        if dedupe:
+            df = df.sort_values("_t").drop_duplicates(
+                subset=["uf", "mun", "zona"], keep="last")
     return df.reset_index(drop=True)
 
 
@@ -174,20 +176,32 @@ def quiroga(m):
     q2p = expit(logit(q1) + m["sw_use"])
     l2p = np.where(cnt, m["l2"], e * q2p)
     f2p = np.where(cnt, m["f2"], e * (1 - q2p))
-    # v1 (estratificada): media de lo contado por estado; fallback al base 1T
-    est_q2 = {}
-    for uf, g in m.groupby("uf"):
-        gg = g[g["f"] > 0]
-        tot = gg["l2"].sum() + gg["f2"].sum()
-        if tot > 0:
-            est_q2[uf] = float(gg["l2"].sum() / tot)
-    q2v1 = m["uf"].map(est_q2).astype(float).to_numpy()
-    cnta = np.asarray(cnt)
-    q2v1 = np.where(cnta, np.asarray(q2, dtype=float), q2v1)
-    q2v1 = np.where(np.isnan(q2v1), np.asarray(q1, dtype=float), q2v1)
+    # v1 (estratificada): electores/participación esperados en TODAS las zonas,
+    # no los votos ya contados. La proporción de cada zona sin datos propios se
+    # toma del municipio, luego del estado y por último del país (encogimiento
+    # jerárquico). Así la curva no reproduce mecánicamente el conteo crudo.
+    def _q_por(claves):
+        d = m[cnt]
+        v = d["l2"] + d["f2"]
+        s = d.groupby(claves).apply(
+            lambda g: g["l2"].sum() / max((g["l2"] + g["f2"]).sum(), 1e-9))
+        if len(claves) == 1:
+            return m[claves[0]].map(s)
+        idx = pd.MultiIndex.from_frame(m[claves])
+        return pd.Series(idx.map(s), index=m.index, dtype=float)
+
+    if cnt.any():
+        q_nac = float(m.loc[cnt, "l2"].sum() /
+                      max((m.loc[cnt, "l2"] + m.loc[cnt, "f2"]).sum(), 1e-9))
+        q_mun, q_est = _q_por(["uf", "mun"]), _q_por(["uf"])
+        q2v1 = q_mun.fillna(q_est).fillna(q_nac)
+    else:
+        q2v1 = q1.copy()
+    q2v1 = q2v1.where(~cnt, q2).fillna(q1).fillna(0.5)
     en = np.asarray(e, dtype=float)
-    l1p = np.where(cnta, m["l2"].to_numpy(), en * q2v1)
-    f1p = np.where(cnta, m["f2"].to_numpy(), en * (1 - q2v1))
+    qv = np.asarray(q2v1, dtype=float)
+    l1p = en * qv
+    f1p = en * (1 - qv)
     return (float(np.nansum(l2p)), float(np.nansum(f2p)),
             float(np.nansum(l1p)), float(np.nansum(f1p)))
 
@@ -237,6 +251,61 @@ def schteingart(base, live):
         return None
     tot = res["final"].sum(0)
     return float(tot[0]), float(tot[1]), float(res["contado"])
+
+
+def _punto_serie(nac):
+    return {"t": datetime.now().astimezone().isoformat(),
+            "escrutado": nac["escrutado"],
+            "margen_p90": round(float(np.interp(nac["escrutado"] / 100.0, modelo_error()[0],
+                                                 modelo_error()[2])), 2),
+            "crudo": _punto(nac["crudo"], True),
+            "swing": _punto(nac["swing"]),
+            "v1": _punto(nac["v1"]),
+            "hybrid": _punto(nac["hybrid"]),
+            "proyectado": _punto(nac["schteingart"])}
+
+
+def _punto(b, con_votos=False):
+    p = {"lula": b["lula"]["pct"], "flavio": b["flavio"]["pct"],
+         "otros": b.get("otros", {}).get("pct", 0.0)}
+    if con_votos:
+        p.update({"lula_votos": b["lula"]["votos"], "flavio_votos": b["flavio"]["votos"],
+                  "otros_votos": b.get("otros", {}).get("votos", 0)})
+    return p
+
+
+def reconstruir_serie(base, live_all):
+    """Rehace la serie histórica con el modelo actual.
+
+    Usa los snapshots del CSV 2T (todas las pasadas) y, para cada punto de la
+    serie anterior, reconstruye el estado conocido hasta ese instante. Así el
+    gráfico de evolución refleja el método corregido y no mezcla versiones.
+    """
+    if live_all is None or live_all.empty or "_t" not in live_all.columns:
+        return None
+    if not os.path.exists(HIST):
+        return None
+    prev = json.load(open(HIST, encoding="utf-8"))
+    out = []
+    for old in prev:
+        t = pd.to_datetime(old.get("t"), errors="coerce")
+        if pd.isna(t):
+            continue
+        if t.tzinfo is not None:
+            t = t.tz_convert("-03:00").tz_localize(None)
+        snap = live_all[live_all["_t"] <= t]
+        if snap.empty:
+            continue
+        snap = (snap.sort_values("_t")
+                .drop_duplicates(subset=["uf", "mun", "zona"], keep="last"))
+        nac, _ = payload_ambito(base, snap, "BR")
+        if nac["crudo"]["lula"]["votos"] <= 0:
+            continue
+        punto = _punto_serie(nac)
+        punto["t"] = old["t"]
+        if not out or out[-1]["escrutado"] != punto["escrutado"]:
+            out.append(punto)
+    return out
 
 
 def payload_ambito(base, live, nombre="BR"):
@@ -325,30 +394,16 @@ def main():
         })
 
     serie = []
-    if os.path.exists(HIST):
+    if "--reconstruir-serie" in sys.argv:
+        serie = reconstruir_serie(base, cargar(LIVE, dedupe=False)) or []
+    elif os.path.exists(HIST):
         serie = json.load(open(HIST, encoding="utf-8"))
     # el gráfico de evolución arranca con los primeros votos contados,
     # no con el punto previo de 0 votos (p. ej. 15:56)
     serie = [p for p in serie
              if float((p.get("crudo") or {}).get("lula_votos", 0) or 0) > 0]
 
-    def _punto(b, con_votos=False):
-        p = {"lula": b["lula"]["pct"], "flavio": b["flavio"]["pct"],
-             "otros": b.get("otros", {}).get("pct", 0.0)}
-        if con_votos:
-            p.update({"lula_votos": b["lula"]["votos"], "flavio_votos": b["flavio"]["votos"],
-                      "otros_votos": b.get("otros", {}).get("votos", 0)})
-        return p
-
-    punto = {"t": datetime.now().astimezone().isoformat(),
-             "escrutado": nac["escrutado"],
-             "margen_p90": round(float(np.interp(nac["escrutado"] / 100.0, modelo_error()[0],
-                                                  modelo_error()[2])), 2),
-             "crudo": _punto(nac["crudo"], True),
-             "swing": _punto(nac["swing"]),
-             "v1": _punto(nac["v1"]),
-             "hybrid": _punto(nac["hybrid"]),
-             "proyectado": _punto(nac["schteingart"])}
+    punto = _punto_serie(nac)
     if not serie or serie[-1].get("escrutado") != punto["escrutado"]:
         serie.append(punto)
     json.dump(serie, open(HIST, "w", encoding="utf-8"), ensure_ascii=False)
