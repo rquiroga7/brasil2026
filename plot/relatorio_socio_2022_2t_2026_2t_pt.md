@@ -1,6 +1,6 @@
 # A economia e a sociedade mudam a migração de votos? (Brasil 2022 2T → 2026 2T)
 
-Fatores socioeconômicos municipais (Censo 2022) cruzados com 5570 municípios. Swing de Lula = % Lula destino − % Lula origen (2022 2T → 2026 2T).
+Fatores socioeconômicos municipais (Censo 2022) cruzados com 5570 municípios. Swing de Lula = % Lula destino − % Lula origen (2022 2T → 2026 2T). Os quintis são cortados por eleitorado: cada um reúne ~20% dos votantes.
 
 ## Correlação com o swing de Lula
 
@@ -26,21 +26,21 @@ Fatores socioeconômicos municipais (Censo 2022) cruzados com 5570 municípios. 
 
 | Factor | Quintil | Bolsonaro→Lula | Bolsonaro→Flavio | Otros→Flavio |
 |---|---|---|---|---|
-| Ingreso per cápita | 1 | 0.0% | 92.9% | — |
-| Ingreso per cápita | 2 | 1.9% | 88.7% | — |
-| Ingreso per cápita | 3 | 2.3% | 93.4% | — |
-| Ingreso per cápita | 4 | 0.0% | 97.4% | — |
-| Ingreso per cápita | 5 | 0.0% | 97.4% | — |
-| % universitarios | 1 | 0.0% | 94.1% | — |
-| % universitarios | 2 | 0.0% | 94.0% | — |
-| % universitarios | 3 | 0.0% | 94.9% | — |
-| % universitarios | 4 | 0.0% | 96.6% | — |
-| % universitarios | 5 | 0.0% | 96.3% | — |
-| % evangélicos | 1 | 0.0% | 95.1% | — |
-| % evangélicos | 2 | 0.0% | 94.5% | — |
-| % evangélicos | 3 | 0.0% | 95.6% | — |
-| % evangélicos | 4 | 0.2% | 93.6% | — |
-| % evangélicos | 5 | 0.4% | 92.8% | — |
+| Ingreso per cápita | 1 | 0.0% | 93.2% | — |
+| Ingreso per cápita | 2 | 4.4% | 89.3% | — |
+| Ingreso per cápita | 3 | 0.6% | 94.6% | — |
+| Ingreso per cápita | 4 | 0.0% | 98.0% | — |
+| Ingreso per cápita | 5 | 0.0% | 97.8% | — |
+| % universitarios | 1 | 0.0% | 93.7% | — |
+| % universitarios | 2 | 0.0% | 95.7% | — |
+| % universitarios | 3 | 0.0% | 96.0% | — |
+| % universitarios | 4 | 0.0% | 97.2% | — |
+| % universitarios | 5 | 1.1% | 93.5% | — |
+| % evangélicos | 1 | 0.0% | 94.7% | — |
+| % evangélicos | 2 | 0.0% | 95.5% | — |
+| % evangélicos | 3 | 0.0% | 96.3% | — |
+| % evangélicos | 4 | 0.8% | 92.5% | — |
+| % evangélicos | 5 | 0.3% | 92.3% | — |
 
 ## Leitura
 Se os coeficientes e as transições mudam fortemente entre quintis, os fatores socioeconômicos **sim** modificam a inferência: a matriz nacional mistura realidades muito distintas. A parte que sobrevive aos efeitos de estado é a relação mais limpa (não confundida pela geografia).

@@ -1,6 +1,6 @@
 # ¿La economía y la sociedad cambian la migración de votos? (Brasil 2022→2026)
 
-Factores socioeconómicos municipales (Censo 2022) cruzados con 5570 municipios. Swing de Lula = % Lula 2026 − % Lula 2022 (1ª vuelta).
+Factores socioeconómicos municipales (Censo 2022) cruzados con 5570 municipios. Swing de Lula = % Lula destino − % Lula origen (2022→2026). Los quintiles se cortan por electorado: cada uno reúne ~20% de los votantes.
 
 ## Correlación con el swing de Lula
 
@@ -24,22 +24,22 @@ Factores socioeconómicos municipales (Censo 2022) cruzados con 5570 municipios.
 
 ## ¿Modifica la inferencia ecológica? Transiciones clave por quintil
 
-| Factor | Quintil | Bolsonaro→Lula | Bolsonaro→Flávio | Otros→Flávio |
+| Factor | Quintil | Bolsonaro→Lula | Bolsonaro→Flavio | Otros→Flavio |
 |---|---|---|---|---|
-| Ingreso per cápita | 1 | 0.0% | 92.1% | 48.4% |
-| Ingreso per cápita | 2 | 0.0% | 91.5% | 18.3% |
-| Ingreso per cápita | 3 | 0.0% | 94.4% | 2.2% |
-| Ingreso per cápita | 4 | 0.0% | 96.4% | 1.4% |
+| Ingreso per cápita | 1 | 0.0% | 92.2% | 47.4% |
+| Ingreso per cápita | 2 | 0.0% | 91.5% | 16.8% |
+| Ingreso per cápita | 3 | 0.0% | 94.4% | 1.7% |
+| Ingreso per cápita | 4 | 0.0% | 96.4% | 1.5% |
 | Ingreso per cápita | 5 | 0.0% | 95.9% | 0.4% |
-| % universitarios | 1 | 0.0% | 92.0% | 41.6% |
-| % universitarios | 2 | 0.0% | 94.1% | 19.3% |
-| % universitarios | 3 | 0.0% | 94.9% | 16.9% |
-| % universitarios | 4 | 0.0% | 92.3% | 18.6% |
-| % universitarios | 5 | 0.0% | 91.6% | 20.6% |
-| % evangélicos | 1 | 0.0% | 93.6% | 30.8% |
-| % evangélicos | 2 | 0.0% | 95.4% | 2.7% |
-| % evangélicos | 3 | 0.0% | 93.0% | 13.6% |
-| % evangélicos | 4 | 0.0% | 92.1% | 4.2% |
+| % universitarios | 1 | 0.0% | 92.0% | 38.7% |
+| % universitarios | 2 | 0.0% | 94.1% | 20.9% |
+| % universitarios | 3 | 0.0% | 94.7% | 10.0% |
+| % universitarios | 4 | 0.0% | 93.3% | 23.5% |
+| % universitarios | 5 | 0.1% | 91.1% | 17.3% |
+| % evangélicos | 1 | 0.0% | 93.6% | 30.1% |
+| % evangélicos | 2 | 0.0% | 95.4% | 2.5% |
+| % evangélicos | 3 | 0.0% | 92.7% | 13.8% |
+| % evangélicos | 4 | 0.0% | 92.1% | 3.8% |
 | % evangélicos | 5 | 0.0% | 92.2% | 5.7% |
 
 ## Lectura

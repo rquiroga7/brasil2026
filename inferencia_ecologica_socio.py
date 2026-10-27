@@ -136,25 +136,59 @@ def correlaciones(df, ycol):
     return pd.DataFrame(filas)
 
 
+def _quintiles_por_poblacion(m, var, cols_peso, q=5):
+    """Quintiles con ~igual electorado, no igual cantidad de zonas.
+
+    La variable socioeconómica es municipal; se ordenan los municipios por esa
+    variable y se cortan en q grupos usando el electorado (suma de los bloques
+    de origen) como peso. Luego se asigna a cada zona el quintil de su municipio.
+    """
+    if "ibge" not in m.columns:
+        return pd.qcut(m[var], q, labels=False, duplicates="drop")
+    d = m.dropna(subset=[var, "ibge"]).copy()
+    d["_w"] = d[cols_peso].sum(axis=1)
+    mun = d.groupby("ibge", as_index=False).agg(var=(var, "first"), w=("_w", "sum"))
+    mun = mun[mun["w"] > 0].sort_values("var")
+    total = float(mun["w"].sum())
+    if total <= 0 or len(mun) < q:
+        return pd.Series(np.nan, index=m.index)
+    cum = mun["w"].cumsum().to_numpy()
+    cortes = []
+    for k in range(1, q):
+        idx = int(np.searchsorted(cum, total * k / q, side="left"))
+        cortes.append(float(mun["var"].iloc[min(idx, len(mun) - 1)]))
+    cortes = np.unique(cortes)
+    if len(cortes) < q - 1:
+        grupo = pd.qcut(mun["var"], q, labels=False, duplicates="drop")
+    else:
+        grupo = pd.cut(mun["var"], bins=[-np.inf] + list(cortes) + [np.inf],
+                       labels=False, include_lowest=True)
+    mapa = mun.assign(q=grupo).set_index("ibge")["q"]
+    return m["ibge"].map(mapa)
+
+
 def ei_por_quintiles(m_sec, var, lab_o_right="Bolsonaro", lab_d_right="Flavio", q=5):
     """Matriz (Lula, derecha, Otros, No voto/Blanco-Nulo) por quintil.
 
+    Los quintiles se cortan por electorado (igual población), no por cantidad de
+    zonas, para que los flujos absolutos entre quintiles sean comparables.
     Se descartan las filas/columnas sin masa (p. ej. "Otros" en un 2º turno),
     de modo que el EM no reciba columnas de origen totalmente vacías.
     """
     m = m_sec.dropna(subset=[var]).copy()
-    m["q"] = pd.qcut(m[var], q, labels=False, duplicates="drop")
     m["b1_o"], m["b2_o"], m["b3_o"] = m["blk_lula_o"], m["blk_bolso_o"], m["blk_otros_o"]
     m["b4_o"] = m["blk_bn_o"] + m["blk_novoto_o"]
     m["b1_d"], m["b2_d"], m["b3_d"] = m["blk_lula_d"], m["blk_bolso_d"], m["blk_otros_d"]
     m["b4_d"] = m["blk_bn_d"] + m["blk_novoto_d"]
     cols_o = ["b1_o", "b2_o", "b3_o", "b4_o"]
     cols_d = ["b1_d", "b2_d", "b3_d", "b4_d"]
+    m["q"] = _quintiles_por_poblacion(m, var, cols_o, q)
+    m = m.dropna(subset=["q"])
     lab_o = ["Lula", lab_o_right, "Otros", "No voto/Blanco-Nulo"]
     lab_d = ["Lula", lab_d_right, "Otros", "No voto/Blanco-Nulo"]
     filas = []
     for g, sub in m.groupby("q"):
-        if len(sub) < 500:
+        if len(sub) < 50:
             continue
         X = sub[cols_o].to_numpy(float)
         Y = sub[cols_d].to_numpy(float)
@@ -258,10 +292,18 @@ def graficar_grupo(quints, claves, archivo, titulo, meto, absoluto=False,
         ax.set_xlabel("Quintil")
         ax.set_ylabel("Millones de votos/personas" if absoluto else "% del bloque de origen")
         ax.grid(alpha=0.35, ls="--")
-    margen = 0.06 * (ymax - ymin) if ymax > ymin else 1.0
+    if absoluto:
+        # Mismo eje y para las dos figuras (Lula y Bolsonaro/Flávio): se toma el
+        # máximo de todas las transiciones del período, no el de cada figura.
+        ymin = 0.0
+        ymax = float(q["votos"].max()) / 1e6 if not q.empty else 1.0
+        margen = 0.06 * ymax if ymax > 0 else 1.0
+    else:
+        margen = 0.06 * (ymax - ymin) if ymax > ymin else 1.0
     for ax in axes:                       # mismo eje y en las tres facetas
         ax.set_ylim(max(0.0, ymin - margen), ymax + margen)
-    suf = " — millones de votos/personas" if absoluto else ""
+    suf = (" — millones de votos/personas · quintiles de igual electorado"
+           if absoluto else " — quintiles de igual electorado")
     fig.suptitle(f"Brasil: {titulo} ({periodo}){suf}", fontsize=12)
     axes[0].legend(fontsize=7)
     fig.tight_layout(rect=[0, 0.03, 1, 0.96])
@@ -294,12 +336,14 @@ def reporte(muni, corr, reg_con, r2_con, n_con, quints, idioma,
     if es:
         lineas.append(f"# ¿La economía y la sociedad cambian la migración de votos? (Brasil {periodo})\n")
         lineas.append(f"Factores socioeconómicos municipales (Censo 2022) cruzados con "
-                      f"{n_con} municipios. Swing de Lula = % Lula destino − % Lula origen ({periodo}).\n")
+                      f"{n_con} municipios. Swing de Lula = % Lula destino − % Lula origen ({periodo}). "
+                      f"Los quintiles se cortan por electorado: cada uno reúne ~20% de los votantes.\n")
         lineas.append("## Correlación con el swing de Lula\n")
     else:
         lineas.append(f"# A economia e a sociedade mudam a migração de votos? (Brasil {periodo})\n")
         lineas.append(f"Fatores socioeconômicos municipais (Censo 2022) cruzados com "
-                      f"{n_con} municípios. Swing de Lula = % Lula destino − % Lula origen ({periodo}).\n")
+                      f"{n_con} municípios. Swing de Lula = % Lula destino − % Lula origen ({periodo}). "
+                      f"Os quintis são cortados por eleitorado: cada um reúne ~20% dos votantes.\n")
         lineas.append("## Correlação com o swing de Lula\n")
     lineas.append("| Factor | Correlación | Intra-estado |")
     lineas.append("|---|---|---|")
